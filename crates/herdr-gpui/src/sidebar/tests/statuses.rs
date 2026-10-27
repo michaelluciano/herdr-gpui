@@ -1,29 +1,32 @@
 use super::*;
 
+/// Status colors are the theme's named tokens through the shared dot spec,
+/// whatever Herdr's palette says: the default theme authors them, the rest
+/// derive them from their own colors.
 #[test]
-fn status_colors_keep_upstream_literals_where_they_already_read() {
-    // Upstream's default palette (Catppuccin Mocha), which its status dots use
-    // whatever terminal colors are loaded.
-    for (status, color) in [
-        (AgentStatus::Working, 0xf9e2af),
-        (AgentStatus::Blocked, 0xf38ba8),
-        (AgentStatus::Done, 0x94e2d5),
-        (AgentStatus::Idle, 0xa6e3a1),
-    ] {
-        for name in ["Default", "Nord", "Dracula", "Catppuccin Mocha"] {
-            let mut theme = Theme::builtin(name).unwrap();
-            assert_eq!(status_style(status, &theme).2, color, "{name}");
-            theme.palette.fill(0x123456);
+fn status_colors_come_from_the_theme_tokens() {
+    for name in ["Default", "Nord", "Dracula", "Catppuccin Mocha"] {
+        let theme = Theme::builtin(name).unwrap();
+        for status in STATUSES {
+            let want = theme.ink(crate::status_dot::spec(status, &theme.tokens()).color);
+            assert_eq!(status_style(status, &theme).2, want, "{name} {status:?}");
             let indicators = Indicators::new(None, StatusIcons::default(), false, false, &theme);
             assert_eq!(indicators.icons, StatusIcons::Dots);
-            assert_eq!(indicators.color(status), color);
+            assert_eq!(indicators.color(status), want, "{name} {status:?}");
         }
     }
-    let mocha = Theme::builtin("Catppuccin Mocha").unwrap();
-    let unknown = status_style(AgentStatus::Unknown, &mocha).2;
-    let channels = |color: u32| [16, 8, 0].map(|shift| ((color >> shift) & 255) as i32);
-    for (lifted, upstream) in channels(unknown).into_iter().zip(channels(0x6c7086)) {
-        assert!((0..=16).contains(&(lifted - upstream)), "{unknown:06x}");
+    let theme = Theme::default();
+    for (status, color) in [
+        (AgentStatus::Working, 0xd9b66a),
+        (AgentStatus::Idle, 0x8d929b),
+        (AgentStatus::Done, 0x7fb596),
+        (AgentStatus::Blocked, 0xd9786a),
+    ] {
+        assert_eq!(
+            status_style(status, &theme).2,
+            theme.ink(color),
+            "{status:?}"
+        );
     }
 }
 
@@ -159,7 +162,7 @@ fn status_colors_reach_the_contrast_setting_on_every_builtin_theme() {
             }
         }
     }
-    // Light chrome darkens the pastels rather than keeping upstream's literals.
+    // Light chrome darkens the pastels rather than keeping the dark literals.
     let latte = Theme::builtin("Catppuccin Latte").unwrap();
     let mocha = Theme::builtin("Catppuccin Mocha").unwrap();
     for status in STATUSES {
@@ -191,16 +194,8 @@ fn status_shapes_match_upstream_dots_and_wire_casing() {
         assert_eq!(serde_json::to_value(status).unwrap(), wire);
         let theme = Theme::default();
         let (diameter, filled, color) = status_style(status, &theme);
-        assert_eq!(
-            color,
-            theme.ink(match status {
-                AgentStatus::Working => 0xf9e2af,
-                AgentStatus::Blocked => 0xf38ba8,
-                AgentStatus::Done => 0x94e2d5,
-                AgentStatus::Idle => 0xa6e3a1,
-                AgentStatus::Unknown => 0x6c7086,
-            })
-        );
+        let dot = crate::status_dot::spec(status, &theme.tokens());
+        assert_eq!(color, theme.ink(dot.color));
         assert_eq!(filled, status != AgentStatus::Idle);
         assert_eq!(
             diameter,

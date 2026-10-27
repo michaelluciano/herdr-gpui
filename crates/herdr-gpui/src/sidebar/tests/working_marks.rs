@@ -4,7 +4,7 @@ use std::{cell::Cell, rc::Rc, time::Duration};
 
 /// Every element that moves, by the selector its mark carries.
 const MOVING: [&str; 7] = [
-    "status-orbit",
+    "status-dot-pulse",
     "status-spin",
     "status-wave",
     "status-chase",
@@ -35,7 +35,7 @@ impl Render for Slot {
 /// only the sets after Superset also move when an agent waits on you.
 fn expected(icons: StatusIcons, status: AgentStatus) -> Option<&'static str> {
     match (status, icons) {
-        (AgentStatus::Working, StatusIcons::Dots) => Some("status-orbit"),
+        (AgentStatus::Working, StatusIcons::Dots) => Some("status-dot-pulse"),
         (AgentStatus::Working, StatusIcons::Solid | StatusIcons::Outline | StatusIcons::Tiles) => {
             Some("status-spin")
         }
@@ -120,6 +120,27 @@ fn moving_marks_redraw_as_time_passes_and_rest_under_reduced_motion(cx: &mut Tes
                     assert_eq!(asked, 0, "{icons:?} {status:?} reduced={reduced}");
                 }
             }
+        }
+    }
+}
+
+/// The default set draws every status through the shared dot: its shape
+/// follows the spec and its color is the spec's token color.
+#[gpui::test]
+fn the_dots_set_draws_each_status_through_the_shared_spec(cx: &mut TestAppContext) {
+    let theme = Theme::default();
+    for status in STATUSES {
+        let dot = crate::status_dot::spec(status, &theme.tokens());
+        let indicators = Indicators::new(None, StatusIcons::Dots, false, false, &theme);
+        assert_eq!(indicators.color(status), theme.ink(dot.color), "{status:?}");
+        let (_, cx) = cx.add_window_view(|_, _| Slot { status, indicators });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        for selector in ["status-dot-pulse", "status-dot-hollow", "status-dot-filled"] {
+            assert_eq!(
+                cx.debug_bounds(selector).is_some(),
+                selector == dot.selector(),
+                "{status:?} {selector}"
+            );
         }
     }
 }

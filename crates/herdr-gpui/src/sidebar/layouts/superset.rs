@@ -148,26 +148,9 @@ fn slot(
                     cx.status_indicators().fade(),
                 ));
         }
-        let (diameter, filled, _) = status_style(status, theme);
-        // A working dot turns in the dot's own place, so the badge stays clear
-        // of the icon's center.
-        if status == AgentStatus::Working {
-            return div()
-                .debug_selector(|| format!("dot-{key}"))
-                .absolute()
-                .top_0()
-                .right_0()
-                .size(px(diameter))
-                .rounded_full()
-                .bg(rgb(theme.sidebar_background()))
-                .child(icon_mark(
-                    StatusIcons::Dots,
-                    status,
-                    diameter,
-                    color,
-                    cx.status_indicators().fade(),
-                ));
-        }
+        let (diameter, _, _) = status_style(status, theme);
+        // The badge keeps the sidebar's fill behind the shared dot, so a hollow
+        // idle ring does not show the icon through it.
         div()
             .debug_selector(|| format!("dot-{key}"))
             .absolute()
@@ -175,13 +158,14 @@ fn slot(
             .right_0()
             .size(px(diameter))
             .rounded_full()
-            .border_1()
-            .border_color(rgb(color))
-            .bg(rgb(if filled {
-                color
-            } else {
-                theme.sidebar_background()
-            }))
+            .bg(rgb(theme.sidebar_background()))
+            .child(icon_mark(
+                StatusIcons::Dots,
+                status,
+                diameter,
+                color,
+                cx.status_indicators().fade(),
+            ))
     });
     div()
         .debug_selector(|| format!("icon-{key}"))

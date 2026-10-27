@@ -192,7 +192,7 @@ fn pills_show_close_buttons_while_the_strip_takes_tab_focus(cx: &mut TestAppCont
 #[gpui::test]
 fn the_pointer_over_a_pill_hides_its_moving_status_under_the_close_button(cx: &mut TestAppContext) {
     let (_view, cx) = strip(cx, TabLayoutMode::Pills);
-    let spinning = |cx: &mut VisualTestContext| cx.debug_bounds("status-orbit").is_some();
+    let spinning = |cx: &mut VisualTestContext| cx.debug_bounds("status-dot-pulse").is_some();
     assert!(spinning(cx), "the working pill spins in the layer");
     let status = cx.debug_bounds("tab-status-w1:t1").unwrap();
     let point_at = |position: Point<Pixels>, cx: &mut VisualTestContext| {

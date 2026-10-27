@@ -203,6 +203,40 @@ fn sessions_sharing_a_worktree_nest_under_one_header(cx: &mut gpui::TestAppConte
     assert!(cx.debug_bounds("agent-local-p1").is_none());
 }
 
+/// A group header's state summary is drawn with the shared dot.
+#[gpui::test]
+fn a_worktree_header_summarises_states_with_the_shared_dot(cx: &mut gpui::TestAppContext) {
+    use herdr_client::protocol::AgentStatus;
+    let (view, cx) = devices_window(cx);
+    cx.update(|_, cx| {
+        view.update(cx, |view, cx| {
+            let snapshot = Arc::make_mut(view.live.snapshot.as_mut().unwrap());
+            snapshot.agents[0].agent_status = AgentStatus::Working;
+            snapshot.agents[1].agent_status = AgentStatus::Idle;
+            cx.notify();
+        })
+    });
+    share_a_worktree(&view, cx);
+    cx.update(|_, cx| {
+        view.update(cx, |view, cx| {
+            view.toggle_worktree_group("local\u{1f}w0", cx)
+        })
+    });
+    cx.update(|window, cx| full_draw(window, cx).clear(cx));
+    let header = cx
+        .debug_bounds("worktree-group-local-local\u{1f}w0")
+        .unwrap();
+    for selector in ["status-dot-pulse", "status-dot-hollow"] {
+        let dot = cx
+            .debug_bounds(selector)
+            .unwrap_or_else(|| panic!("{selector}"));
+        assert!(
+            header.contains(&dot.origin),
+            "{selector} {dot:?} {header:?}"
+        );
+    }
+}
+
 #[gpui::test]
 fn the_filter_narrows_sessions_by_title(cx: &mut gpui::TestAppContext) {
     let (view, cx) = devices_window(cx);

@@ -41,7 +41,10 @@ pub(crate) use {
     agents::{Indicators, agent_name, state_label, status_indicator, status_text},
     device_drag::DeviceDrag,
     hover::{HoverMenu, HoverRest},
-    metrics::{ARROW_RESERVE, HOST_ARROW_WIDTH, HOST_GAP, ICON_RESERVE, LABEL_GAP, STATUS_WIDTH},
+    metrics::{
+        ARROW_RESERVE, HOST_ARROW_WIDTH, HOST_GAP, ICON_RESERVE, LABEL_GAP, STATUS_DOT_UNKNOWN,
+        STATUS_WIDTH,
+    },
     rail::SidebarMode,
     render::NestedReveal,
     reorder::WorkspaceDrag,

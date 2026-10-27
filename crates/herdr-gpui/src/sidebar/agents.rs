@@ -7,6 +7,7 @@ use crate::{
     HerdrWindow,
     config::{FontConfig, StatusIcons, Theme},
     herdr_settings::Settings,
+    status_dot::{Dot, spec},
 };
 use gpui::{prelude::*, *};
 use herdr_client::protocol::{AgentStatus, ClientShellAgent, ClientShellSnapshot};
@@ -250,8 +251,9 @@ pub(crate) struct Indicators {
 }
 
 impl Indicators {
-    /// Herdr's settings supply only the status colors; its indicator style
-    /// is the terminal client's, and this app draws `icons` instead.
+    /// Herdr's settings supply the status colors of themes that do not author
+    /// their own; its indicator style is the terminal client's, and this app
+    /// draws `icons` instead.
     pub(crate) fn new(
         settings: Option<&Settings>,
         icons: StatusIcons,
@@ -270,7 +272,9 @@ impl Indicators {
                 AgentStatus::Blocked,
             ]
             .map(|status| {
-                settings.map_or_else(
+                // The default theme authors its status tokens; any other
+                // theme keeps Herdr's palette colors.
+                settings.filter(|_| theme.authored.is_none()).map_or_else(
                     || status_style(status, theme).2,
                     |settings| theme.ink(settings.status_color(status, light)),
                 )
@@ -383,13 +387,6 @@ pub(super) fn status_mark(
     if indicators.icons != StatusIcons::Dots {
         return status_icon(status, font, indicators, color);
     }
-    // Upstream dots: blocked/done filled, idle hollow, unknown a small dot.
-    // Working spins instead, so busy agents read apart from settled ones.
-    let (diameter, filled) = match status {
-        AgentStatus::Unknown => (STATUS_DOT_UNKNOWN, true),
-        AgentStatus::Idle => (STATUS_WIDTH, false),
-        _ => (STATUS_WIDTH, true),
-    };
     div()
         .w(px(indicators.width(font)))
         .h(px(STATUS_WIDTH))
@@ -398,41 +395,18 @@ pub(super) fn status_mark(
         .flex()
         .items_center()
         .justify_center()
-        .when(status == AgentStatus::Working, |slot| {
-            slot.child(icon_mark(
+        .child(if status == AgentStatus::Working {
+            // Pulses in the mark layer, so busy rows never rebuild the sidebar.
+            icon_mark(
                 StatusIcons::Dots,
                 status,
                 STATUS_WIDTH,
                 color,
                 indicators.fade(),
-            ))
-        })
-        .when(status != AgentStatus::Working, |slot| {
-            slot.child(
-                div()
-                    .size(px(if bold { STATUS_WIDTH } else { diameter }))
-                    .rounded_full()
-                    .border_1()
-                    .when(bold, |dot| dot.border_2())
-                    .border_color(rgb(color))
-                    .when(filled, |dot| dot.bg(rgb(color))),
             )
+        } else {
+            Dot::new(status, color).bold(bold).drawn(STATUS_WIDTH)
         })
-}
-
-/// A working dot: a faint ring with a spinning arc, `size` across. Rows draw
-/// it at the dot's size, so they keep their geometry.
-fn working_orbit(size: f32, color: u32) -> impl IntoElement {
-    spin(
-        svg()
-            .debug_selector(|| "status-orbit".into())
-            .path("icons/status-orbit.svg")
-            .size(px(size))
-            .flex_none()
-            .text_color(rgb(color)),
-        "status-orbit",
-        900,
-    )
 }
 
 /// Turns `mark` once every `period_ms`. Every spinner of one kind shares an
@@ -494,9 +468,6 @@ pub(super) fn icon_mark(
 }
 
 fn drawn_mark(icons: StatusIcons, status: AgentStatus, size: f32, color: u32) -> AnyElement {
-    if icons == StatusIcons::Dots && status == AgentStatus::Working {
-        return working_orbit(size, color).into_any_element();
-    }
     let Some(path) = crate::icons::status_icon(icons, status) else {
         return super::animated::mark(icons, status, size, color);
     };
@@ -554,20 +525,16 @@ pub(crate) fn state_label<'a>(
         )
 }
 
-/// Upstream draws status from its own palette, defaulting to Catppuccin Mocha,
-/// and never from the terminal's ANSI colors. Matching those literals keeps a
-/// dot the same color in both clients whatever terminal theme is loaded, where
-/// ANSI slots would drift: Xcode Dark paints its cyan purple. Mocha's pastels
-/// vanish on light chrome, so [`Theme::ink`] darkens them there, keeping hue.
+/// A status's dot size, fill and color: the shared dot's token color, darkened
+/// by [`Theme::ink`] where chrome is light so the hue holds up against it.
 pub(super) fn status_style(status: AgentStatus, theme: &Theme) -> (f32, bool, u32) {
-    let (diameter, filled, color) = match status {
-        AgentStatus::Working => (STATUS_WIDTH, true, 0xf9e2af),
-        AgentStatus::Blocked => (STATUS_WIDTH, true, 0xf38ba8),
-        AgentStatus::Done => (STATUS_WIDTH, true, 0x94e2d5),
-        AgentStatus::Idle => (STATUS_WIDTH, false, 0xa6e3a1),
-        AgentStatus::Unknown => (STATUS_DOT_UNKNOWN, true, 0x6c7086),
+    let dot = spec(status, &theme.tokens());
+    let diameter = if dot.small {
+        STATUS_DOT_UNKNOWN
+    } else {
+        STATUS_WIDTH
     };
-    (diameter, filled, theme.ink(color))
+    (diameter, dot.filled, theme.ink(dot.color))
 }
 
 #[cfg(test)]
@@ -604,10 +571,14 @@ mod tests {
                     AgentStatus::Done,
                     AgentStatus::Blocked,
                 ] {
-                    assert_eq!(
-                        indicators.color(status),
+                    // The default theme authors its status tokens, which
+                    // beat Herdr's palette; every other theme follows it.
+                    let want = if theme.authored.is_some() {
+                        theme.ink(crate::status_dot::spec(status, &theme.tokens()).color)
+                    } else {
                         theme.ink(settings.status_color(status, light))
-                    );
+                    };
+                    assert_eq!(indicators.color(status), want, "{name} {status:?}");
                     for background in [theme.background, theme.surface, theme.active] {
                         assert!(
                             crate::contrast::ratio(indicators.color(status), background)

@@ -8,6 +8,7 @@ use crate::{
     config::{Theme, corners},
     fonts::StyledFont,
     sidebar::Indicators,
+    status_dot::Dot,
 };
 use gpui::{prelude::*, *};
 use herdr_client::protocol::AgentStatus;
@@ -40,15 +41,10 @@ impl Look<'_> {
             .child(text.into())
     }
 
-    /// A status dot as the sidebar draws it: idle hollow, the rest filled.
-    pub fn dot(&self, status: AgentStatus) -> Div {
-        let color = self.status(status);
-        let dot = div().flex_none().size(px(7.)).rounded_full();
-        if status == AgentStatus::Idle {
-            dot.border_1().border_color(rgb(color))
-        } else {
-            dot.bg(rgb(color))
-        }
+    /// A status dot as the sidebar draws it: the shared dot, so a working
+    /// agent pulses here too.
+    pub fn dot(&self, status: AgentStatus) -> AnyElement {
+        Dot::new(status, self.status(status)).drawn(7.)
     }
 
     pub fn link(&self, link: Link) -> Div {

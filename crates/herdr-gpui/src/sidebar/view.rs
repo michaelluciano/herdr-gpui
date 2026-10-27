@@ -101,6 +101,9 @@ mod tests {
         cx: &mut gpui::TestAppContext,
     ) {
         let (view, cx) = cx.add_window_view(fixture_window);
+        // The default theme authors its status tokens, so shared settings no
+        // longer feed the indicators; this test needs a theme that defers to them.
+        view.update(cx, |view, _| view.theme.authored = None);
         let sidebar = cx.update(|window, cx| {
             window.draw(cx).clear(cx);
             view.read(cx).sidebar_view.clone()

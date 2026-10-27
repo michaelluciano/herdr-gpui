@@ -129,6 +129,7 @@ mod smooth_scroll;
 mod sound;
 mod state;
 mod state_file;
+mod status_dot;
 mod storage_warning;
 mod system_load;
 mod tab_layout;
