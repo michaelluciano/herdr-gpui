@@ -28,6 +28,7 @@ use gpui::{prelude::*, *};
 mod agent_rows;
 mod device_tree;
 mod nested_agents;
+mod worktree_group;
 
 pub(crate) use nested_agents::NestedReveal;
 

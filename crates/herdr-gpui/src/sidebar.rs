@@ -22,6 +22,7 @@ mod search;
 pub(crate) mod slide;
 mod sticky;
 mod tokens;
+mod unified;
 mod view;
 mod wash;
 mod workspaces;

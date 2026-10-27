@@ -157,3 +157,74 @@ fn one_search_field_and_one_setting_for_both(cx: &mut gpui::TestAppContext) {
     assert!(cx.debug_bounds("sidebar-search").is_some());
     assert!(cx.debug_bounds("device-tree-search").is_none());
 }
+
+/// Puts both of this machine's agents in workspace `w0`, so they share a worktree.
+fn share_a_worktree(view: &Entity<HerdrWindow>, cx: &mut gpui::VisualTestContext) {
+    cx.update(|_, cx| {
+        view.update(cx, |view, cx| {
+            let snapshot = Arc::make_mut(view.live.snapshot.as_mut().unwrap());
+            snapshot.agents[1].workspace_id = "w0".into();
+            snapshot.agents[1].title = Some("Investigate sidebar rendering".into());
+            cx.notify();
+        })
+    });
+    cx.update(|window, cx| full_draw(window, cx).clear(cx));
+}
+
+#[gpui::test]
+fn sessions_sharing_a_worktree_nest_under_one_header(cx: &mut gpui::TestAppContext) {
+    let (view, cx) = devices_window(cx);
+    // Apart, each is a flat row and there is no group header.
+    assert!(
+        cx.debug_bounds("worktree-group-local-local\u{1f}w0")
+            .is_none()
+    );
+    share_a_worktree(&view, cx);
+    let header = cx
+        .debug_bounds("worktree-group-local-local\u{1f}w0")
+        .unwrap();
+    let first = cx.debug_bounds("agent-local-p0").unwrap();
+    let second = cx.debug_bounds("agent-local-p1").unwrap();
+    assert!(header.bottom() <= first.top() && first.bottom() <= second.top());
+    // Sessions step in under the header.
+    assert!(first.left() > header.left());
+
+    cx.update(|_, cx| {
+        view.update(cx, |view, cx| {
+            view.toggle_worktree_group("local\u{1f}w0", cx);
+        })
+    });
+    cx.update(|window, cx| full_draw(window, cx).clear(cx));
+    assert!(
+        cx.debug_bounds("worktree-group-local-local\u{1f}w0")
+            .is_some()
+    );
+    assert!(cx.debug_bounds("agent-local-p0").is_none());
+    assert!(cx.debug_bounds("agent-local-p1").is_none());
+}
+
+#[gpui::test]
+fn the_filter_narrows_sessions_by_title(cx: &mut gpui::TestAppContext) {
+    let (view, cx) = devices_window(cx);
+    share_a_worktree(&view, cx);
+    let input = view.read_with(cx, |view, _| {
+        view.devices_overview
+            .tree_search
+            .as_ref()
+            .unwrap()
+            .input
+            .clone()
+    });
+    cx.update(|window, cx| window.focus(&input.read(cx).focus.clone(), cx));
+    cx.simulate_input("investigate");
+    cx.run_until_parked();
+    cx.update(|window, cx| full_draw(window, cx).clear(cx));
+    // One session survives, so it is a flat row and the group header goes.
+    assert!(cx.debug_bounds("agent-local-p1").is_some());
+    assert!(cx.debug_bounds("agent-local-p0").is_none());
+    assert!(
+        cx.debug_bounds("worktree-group-local-local\u{1f}w0")
+            .is_none()
+    );
+    assert!(cx.debug_bounds("host-ssh:test").is_none());
+}

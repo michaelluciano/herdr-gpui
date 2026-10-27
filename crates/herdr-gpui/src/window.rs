@@ -155,6 +155,8 @@ pub(crate) struct HerdrWindow {
     pub(crate) code_views:
         std::collections::HashMap<crate::browser::TabId, crate::code_view::CodeView>,
     pub(crate) collapsed_repos: std::collections::HashSet<String>,
+    /// Worktree groups folded in the Devices layout; lives only for the session.
+    pub(crate) collapsed_worktree_groups: std::collections::HashSet<String>,
     pub(crate) config: config::Config,
     pub(crate) config_load: Option<Task<()>>,
     pub(crate) config_load_revision: u64,

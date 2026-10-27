@@ -160,6 +160,7 @@ impl HerdrWindow {
             code_indexes: Default::default(),
             code_views: Default::default(),
             collapsed_repos: Default::default(),
+            collapsed_worktree_groups: Default::default(),
             config,
             config_load: None,
             config_load_revision: 0,
