@@ -21,7 +21,13 @@ fn concrete_default_fonts_and_shared_native_decoration() {
     let appearance = Appearance::default();
     assert_eq!(
         appearance.config.terminal.family,
-        crate::bundled_font::FAMILY
+        if cfg!(target_os = "linux") {
+            "DejaVu Sans Mono"
+        } else if cfg!(windows) {
+            "Cascadia Mono"
+        } else {
+            "Menlo"
+        }
     );
     let options = crate::titlebar::options("Logs");
     assert_eq!(options.title.unwrap().as_ref(), "Logs");

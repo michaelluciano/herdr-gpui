@@ -428,7 +428,6 @@ pub(crate) fn run() -> std::process::ExitCode {
     gpui_platform::application()
         .with_assets(icons::Icons)
         .run(move |cx| {
-            crate::bundled_font::install(cx);
             let window_count = window_state.as_ref().map_or(1, |state| state.count());
             if let Some(state) = window_state {
                 state.install(cx);

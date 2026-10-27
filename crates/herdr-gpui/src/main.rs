@@ -18,7 +18,6 @@ mod backdrop;
 mod bell;
 mod browser;
 mod bundled;
-mod bundled_font;
 mod caffeine;
 mod caption;
 mod chat;

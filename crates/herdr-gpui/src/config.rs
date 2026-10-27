@@ -366,7 +366,11 @@ pub enum FileTarget {
 
 impl Default for Config {
     fn default() -> Self {
-        let family = crate::bundled_font::FAMILY;
+        let fonts::DefaultFonts {
+            monospace,
+            sans: ui,
+            ..
+        } = fonts::PLATFORM_FONTS;
         let font = |family: &str, size| FontConfig {
             family: family.into(),
             size,
@@ -430,7 +434,7 @@ impl Default for Config {
             show_sidebar_search: true,
             show_system_load: true,
             show_window_controls: cfg!(target_os = "linux"),
-            sidebar: font(family, 12.0),
+            sidebar: font(monospace, 12.0),
             sidebar_layout: SidebarLayout::default(),
             sidebar_style: SidebarStyle::default(),
             smooth_scroll: true,
@@ -441,11 +445,11 @@ impl Default for Config {
             tab_layout: TabLayoutMode::default(),
             // Tabs are terminal chrome, so they read in the monospace face the
             // sidebar and terminal use, as they do in the reference UI.
-            tabs: font(family, 12.0),
-            terminal: font(family, 14.0),
+            tabs: font(monospace, 12.0),
+            terminal: font(monospace, 14.0),
             terminal_padding: Padding::default(),
             theme: "Default".into(),
-            ui: font(family, 12.0),
+            ui: font(ui, 12.0),
             unknown_keys: Vec::new(),
             updates: UpdatesConfig::default(),
             usage: crate::usage::UsageConfig::default(),

@@ -330,11 +330,9 @@ project_roots = []
 # Preferences offers a searchable picker for all four families together or each row.
 # Platform default removes the local family override; fallback cascades remain active.
 [sidebar]
-# Default: "B612 Mono", bundled with the app. If it cannot load, the face falls
-# back to "Menlo" on macOS, "Cascadia Mono" on Windows (Consolas when missing),
-# "DejaVu Sans Mono" on Linux (or an installed monospace family such as
-# JetBrains Mono when DejaVu is missing). B612 Mono has no box-drawing or
-# braille glyphs, so the terminal draws those from that platform family.
+# Default: "Menlo" on macOS, "Cascadia Mono" on Windows (Consolas when
+# missing), "DejaVu Sans Mono" on Linux (or an installed monospace family such
+# as JetBrains Mono when DejaVu is missing).
 # family = "DejaVu Sans Mono"
 size = 12
 # fallback = ["Symbols Nerd Font Mono"]
@@ -403,21 +401,17 @@ size = 12
 # apply_to = ["sidebar", "terminal"]
 
 [tabs]
-# Default: "B612 Mono", bundled with the app. If it cannot load, the face falls
-# back to "Menlo" on macOS, "Cascadia Mono" on Windows (Consolas when missing),
-# "DejaVu Sans Mono" on Linux (or an installed monospace family such as
-# JetBrains Mono when DejaVu is missing). B612 Mono has no box-drawing or
-# braille glyphs, so the terminal draws those from that platform family.
+# Default: "Menlo" on macOS, "Cascadia Mono" on Windows (Consolas when
+# missing), "DejaVu Sans Mono" on Linux (or an installed monospace family such
+# as JetBrains Mono when DejaVu is missing).
 # family = "DejaVu Sans Mono"
 size = 12
 # fallback = ["Symbols Nerd Font Mono"]
 
 [terminal]
-# Default: "B612 Mono", bundled with the app. If it cannot load, the face falls
-# back to "Menlo" on macOS, "Cascadia Mono" on Windows (Consolas when missing),
-# "DejaVu Sans Mono" on Linux (or an installed monospace family such as
-# JetBrains Mono when DejaVu is missing). B612 Mono has no box-drawing or
-# braille glyphs, so the terminal draws those from that platform family.
+# Default: "Menlo" on macOS, "Cascadia Mono" on Windows (Consolas when
+# missing), "DejaVu Sans Mono" on Linux (or an installed monospace family such
+# as JetBrains Mono when DejaVu is missing).
 # family = "DejaVu Sans Mono"
 size = 14
 # fallback = ["Symbols Nerd Font Mono"]
@@ -441,9 +435,8 @@ size = 14
 # padding_y = [4, 8]
 
 [ui]
-# Default: "B612 Mono", bundled with the app. If it cannot load, the face falls back to
-# ".SystemUIFont" on macOS and Windows, "DejaVu Sans" on Linux (or an installed sans
-# family such as Noto Sans when DejaVu is missing).
+# Default: ".SystemUIFont" on macOS and Windows, "DejaVu Sans" on Linux (or an installed
+# sans family such as Noto Sans when DejaVu is missing).
 # family = "DejaVu Sans"
 size = 12
 # fallback = ["Symbols Nerd Font Mono"]
