@@ -99,3 +99,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+The bundled B612 Mono font in crates/herdr-gpui/fonts/ is copyright 2012 The B612
+Project Authors (https://github.com/polarsys/b612), licensed under the SIL Open
+Font License 1.1. The license text and source revision are in
+crates/herdr-gpui/fonts/OFL.txt and crates/herdr-gpui/fonts/README.md.

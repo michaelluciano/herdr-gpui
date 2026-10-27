@@ -186,10 +186,10 @@ fn detection_fills_only_the_faces_the_config_left_alone() -> anyhow::Result<()> 
 
 #[test]
 fn fonts_are_not_enumerated_when_nothing_needs_checking() -> anyhow::Result<()> {
-    // Enumerating installed families is slow, so default families with
-    // explicit empty cascades, which name nothing to check or detect, must
-    // not pay for it. Linux and Windows still check that their defaults are
-    // installed, since they have alternatives to substitute.
+    // Enumerating installed families is slow, so a config that names nothing
+    // to check or detect must not pay for it. The bundled default is not such
+    // a name: it is checked against the installed families, since a failed
+    // load falls back to the platform default.
     let mut config = Config::parse(
         "[sidebar]\nfallback = []\n[tabs]\nfallback = []\n\
              [terminal]\nfallback = []\n[ui]\nfallback = []",
@@ -202,8 +202,26 @@ fn fonts_are_not_enumerated_when_nothing_needs_checking() -> anyhow::Result<()> 
         },
         |_| false,
     );
-    let defaults = crate::config::fonts::PLATFORM_FONTS;
-    assert_eq!(enumerated, defaults.is_replaceable(defaults.monospace));
+    assert!(enumerated);
+
+    // Platform aliases name nothing to check either.
+    for face in [
+        &mut config.sidebar,
+        &mut config.tabs,
+        &mut config.terminal,
+        &mut config.ui,
+    ] {
+        face.family = ".SystemUIFont".into();
+    }
+    let mut enumerated = false;
+    config.resolve_fonts_with(
+        || {
+            enumerated = true;
+            Vec::<String>::new()
+        },
+        |_| false,
+    );
+    assert!(!enumerated);
     Ok(())
 }
 
@@ -257,23 +275,8 @@ fn fallback_lists_are_validated_per_face() {
 
 #[test]
 fn defaults_and_partial_settings() -> anyhow::Result<()> {
-    // Sidebar, tabs, terminal, ui: only the status bar and modals are sans.
-    #[cfg(target_os = "linux")]
-    let families = [
-        "DejaVu Sans Mono",
-        "DejaVu Sans Mono",
-        "DejaVu Sans Mono",
-        "DejaVu Sans",
-    ];
-    #[cfg(windows)]
-    let families = [
-        "Cascadia Mono",
-        "Cascadia Mono",
-        "Cascadia Mono",
-        ".SystemUIFont",
-    ];
-    #[cfg(not(any(target_os = "linux", windows)))]
-    let families = ["Menlo", "Menlo", "Menlo", ".SystemUIFont"];
+    // Sidebar, tabs, terminal, ui: every face starts on the bundled font.
+    let families = [crate::bundled_font::FAMILY; 4];
 
     for config in [
         Config::default(),

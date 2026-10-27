@@ -125,6 +125,86 @@ fn resolution_replaces_missing_platform_defaults_only() -> anyhow::Result<()> {
     assert_eq!(config.terminal.family, "Iosevka");
     assert_eq!(config.ui.family, sans);
     // Defaults themselves are untouched; only the loaded copy is resolved.
-    assert_eq!(default.terminal.family, PLATFORM_FONTS.monospace);
+    assert_eq!(default.terminal.family, crate::bundled_font::FAMILY);
+    Ok(())
+}
+
+fn bundled_installed(extra: &[&str]) -> Vec<String> {
+    [crate::bundled_font::FAMILY]
+        .iter()
+        .chain(extra)
+        .map(|family| (*family).to_owned())
+        .collect()
+}
+
+#[test]
+fn every_face_defaults_to_the_bundled_font() -> anyhow::Result<()> {
+    for config in [Config::default(), Config::parse("")?] {
+        for face in [&config.sidebar, &config.tabs, &config.terminal, &config.ui] {
+            assert_eq!(face.family, "B612 Mono");
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn the_bundled_font_stays_when_registered_and_a_user_family_still_wins() -> anyhow::Result<()> {
+    let mut config = Config::parse("[terminal]\nfamily = 'Iosevka'")?;
+    config.resolve_fonts_with(|| bundled_installed(&["Iosevka", "Menlo"]), |_| false);
+    assert_eq!(config.terminal.family, "Iosevka");
+    for face in [&config.sidebar, &config.tabs, &config.ui] {
+        assert_eq!(face.family, "B612 Mono");
+    }
+    assert!(config.missing_fonts.is_empty());
+    Ok(())
+}
+
+#[test]
+fn a_bundled_font_that_failed_to_load_falls_back_to_the_platform_default() {
+    let mut config = Config::default();
+    config.resolve_fonts_with(
+        || ["Noto Sans Mono", "Noto Sans", "Consolas"].map(str::to_owned),
+        |_| false,
+    );
+    let monospace = if cfg!(target_os = "linux") {
+        "Noto Sans Mono"
+    } else if cfg!(windows) {
+        "Consolas"
+    } else {
+        "Menlo"
+    };
+    let sans = if cfg!(target_os = "linux") {
+        "Noto Sans"
+    } else {
+        PLATFORM_FONTS.sans
+    };
+    assert_eq!(config.terminal.family, monospace);
+    assert_eq!(config.sidebar.family, monospace);
+    assert_eq!(config.tabs.family, monospace);
+    assert_eq!(config.ui.family, sans);
+    assert!(
+        config.missing_fonts.is_empty(),
+        "the fallback is silent here"
+    );
+}
+
+#[test]
+fn the_terminal_cascade_reaches_the_platform_monospace_for_box_drawing() -> anyhow::Result<()> {
+    // B612 Mono has no box-drawing, block or braille glyphs; the platform
+    // monospace draws them.
+    let monospace = PLATFORM_FONTS.monospace;
+    let mut config = Config::default();
+    config.resolve_fonts_with(
+        || bundled_installed(&[monospace, "Symbols Nerd Font Mono"]),
+        |_| false,
+    );
+    assert_eq!(
+        config.terminal.fallbacks.as_deref(),
+        Some(&[monospace.to_owned(), "Symbols Nerd Font Mono".to_owned()][..])
+    );
+    // A cascade the user wrote, even an empty one, is kept as written.
+    let mut config = Config::parse("[terminal]\nfallback = []")?;
+    config.resolve_fonts_with(|| bundled_installed(&[monospace]), |_| false);
+    assert_eq!(config.terminal.fallbacks, Some(vec![]));
     Ok(())
 }

@@ -4,7 +4,7 @@ use super::{
     Config,
     font_weight::{self, MissingWeight},
 };
-use crate::Result;
+use crate::{Result, bundled_font::FAMILY as BUNDLED_FAMILY};
 use gpui::{Font, FontFallbacks, FontWeight};
 use serde::Deserialize;
 use std::{collections::BTreeSet, ops::RangeInclusive};
@@ -316,7 +316,8 @@ impl FontConfig {
     /// fallback. Dot-prefixed names are aliases GPUI resolves itself.
     fn requested(&self) -> impl Iterator<Item = &str> {
         let family = (self.family != PLATFORM_FONTS.monospace
-            && self.family != PLATFORM_FONTS.sans)
+            && self.family != PLATFORM_FONTS.sans
+            && self.family != BUNDLED_FAMILY)
             .then_some(self.family.as_str());
         family
             .into_iter()
@@ -433,9 +434,9 @@ impl Config {
             .into_iter()
             .flat_map(FontConfig::requested)
             .collect();
-        let check_defaults = configured
-            .iter()
-            .any(|face| PLATFORM_FONTS.is_replaceable(&face.family));
+        let check_defaults = configured.iter().any(|face| {
+            face.family == BUNDLED_FAMILY || PLATFORM_FONTS.is_replaceable(&face.family)
+        });
         let detect = configured.iter().any(|face| face.fallbacks.is_none());
         if requested.is_empty() && !check_defaults && !detect {
             return;
@@ -449,7 +450,21 @@ impl Config {
             &mut self.ui,
         ];
         if check_defaults {
-            for face in faces.iter_mut() {
+            // The bundled font is registered before config loads, so it is
+            // missing only when that failed; the face then takes the default
+            // it replaced, which substitution below may swap again.
+            let bundled_loaded = installed.contains(BUNDLED_FAMILY);
+            for (index, face) in faces.iter_mut().enumerate() {
+                if face.family == BUNDLED_FAMILY && !bundled_loaded {
+                    let defaults = PLATFORM_FONTS;
+                    // The last face is the UI's; the rest are monospace.
+                    face.family = if index == 3 {
+                        defaults.sans
+                    } else {
+                        defaults.monospace
+                    }
+                    .into();
+                }
                 if let Some(family) = PLATFORM_FONTS.substitute(&face.family, &installed) {
                     face.family = family;
                 }
@@ -463,13 +478,27 @@ impl Config {
         let [_, _, terminal, _] = &faces;
         let terminal_draws_icons =
             draws_icons(&terminal.family) && !self.missing_fonts.contains(&terminal.family);
+        // The bundled font has no box-drawing, block or braille glyphs, so
+        // its monospace faces search the platform monospace before the icons.
+        let platform_monospace = PLATFORM_FONTS.monospace;
+        let box_drawing = [PLATFORM_FONTS
+            .substitute(platform_monospace, &installed)
+            .unwrap_or_else(|| platform_monospace.to_owned())]
+        .into_iter()
+        .filter(|family| installed.contains(family))
+        .collect::<Vec<_>>();
         let detected = symbol_fallbacks(installed);
         // Only the terminal draws prompts; an explicit `fallback`, even `[]`,
         // is a choice the user already made.
         self.icon_font_missing = detected.is_empty() && terminal_detects && !terminal_draws_icons;
-        for face in faces {
+        for (index, face) in faces.into_iter().enumerate() {
             if face.fallbacks.is_none() {
-                face.fallbacks = Some(detected.clone());
+                let monospace_bundled = face.family == BUNDLED_FAMILY && index != 3;
+                face.fallbacks = Some(if monospace_bundled {
+                    [box_drawing.clone(), detected.clone()].concat()
+                } else {
+                    detected.clone()
+                });
             }
         }
     }

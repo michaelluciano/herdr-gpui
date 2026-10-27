@@ -1,6 +1,7 @@
 use super::*;
 use core::prelude::v1::test;
 
+mod b612_metrics;
 mod backdrop;
 mod cells;
 mod composition;
