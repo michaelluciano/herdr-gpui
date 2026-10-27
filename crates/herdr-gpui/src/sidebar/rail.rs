@@ -202,7 +202,7 @@ impl HerdrWindow {
                                     } else {
                                         theme.muted
                                     },
-                                    theme.sidebar_background(),
+                                    theme.rail_background(),
                                     width,
                                 )),
                         )
@@ -446,9 +446,9 @@ impl HerdrWindow {
             .text_size(px(font.size))
             .line_height(px(line_height(font)))
             .text_color(rgb(theme.foreground))
-            .bg(self.fill().panel(theme.sidebar_background()))
+            .bg(self.fill().panel(theme.rail_background()))
             .border_r_1()
-            .border_color(rgb(theme.active))
+            .border_color(rgb(theme.tokens().line))
             // No expand control of its own: the sidebar toggle is always on
             // screen, over the rail beside the activity bar, else in the
             // header or leading the tab row.
@@ -468,7 +468,7 @@ impl HerdrWindow {
                     .child(spaces),
             )
             .when(self.config.show_agents, |rail| {
-                rail.child(div().flex_none().h(px(1.)).bg(rgb(theme.active)))
+                rail.child(div().flex_none().h(px(1.)).bg(rgb(theme.tokens().line)))
                     .child(
                         div()
                             .debug_selector(|| "rail-agents-section".into())

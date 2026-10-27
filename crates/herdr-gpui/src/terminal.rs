@@ -22,9 +22,9 @@ use herdr_client::protocol::{
 use std::num::NonZeroU16;
 
 #[cfg(test)]
-pub const BACKGROUND: u32 = 0x101419;
+pub const BACKGROUND: u32 = 0x26282c;
 #[cfg(test)]
-pub const FOREGROUND: u32 = 0xd8dee9;
+pub const FOREGROUND: u32 = 0xd8dadf;
 pub const FONT_SIZE: f32 = 14.;
 pub const CELL_HEIGHT: f32 = 20.;
 

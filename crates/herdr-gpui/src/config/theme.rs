@@ -326,10 +326,31 @@ pub struct Theme {
     /// The system accent standing in for the theme's, from
     /// [`Theme::with_accent`]; every theme loads without one.
     pub system_accent: Option<u32>,
+    /// Chrome roles only the default theme authors; see [`Theme::tokens`].
+    pub(crate) authored: Option<super::theme_tokens::Authored>,
 }
 
 impl Default for Theme {
     fn default() -> Self {
+        Self {
+            background: 0x26282c,
+            foreground: 0xd8dadf,
+            cursor: 0xd8dadf,
+            surface: 0x2b2d31,
+            active: 0x363849,
+            muted: 0x9fa3ab,
+            accent: Some(0xa99be0),
+            authored: Some(super::theme_tokens::SOFT_DARK),
+            ..Self::neutral()
+        }
+    }
+}
+
+impl Theme {
+    /// The xterm palette on neutral chrome: the starting point that Ghostty
+    /// files and Herdr palettes overwrite. It carries no accent and no
+    /// authored tokens, so nothing of the default look leaks into them.
+    pub(crate) fn neutral() -> Self {
         let mut palette = [0; 256];
         palette[..16].copy_from_slice(&[
             0x000000, 0x800000, 0x008000, 0x808000, 0x000080, 0x800080, 0x008080, 0xc0c0c0,
@@ -358,6 +379,7 @@ impl Default for Theme {
             palette,
             contrast: Contrast::Standard,
             system_accent: None,
+            authored: None,
         }
     }
 }
@@ -465,7 +487,12 @@ impl Theme {
 
     /// The sidebar's fill: Herdr's `sidebar_bg` when set, else the surface.
     pub fn sidebar_background(&self) -> u32 {
-        self.sidebar.unwrap_or(self.surface)
+        self.sidebar.unwrap_or(self.tokens().panel)
+    }
+
+    /// The collapsed rail's fill: Herdr's `sidebar_bg` when set, else the rail.
+    pub fn rail_background(&self) -> u32 {
+        self.tokens().rail
     }
 
     /// Dimmed foreground for rows that are not the current one: upstream's
@@ -593,7 +620,7 @@ impl Theme {
             background,
             foreground,
             cursor: foreground,
-            ..Self::default()
+            ..Self::neutral()
         };
         theme.palette[..16].copy_from_slice(&ansi);
         theme.derive_chrome();
@@ -601,7 +628,7 @@ impl Theme {
     }
 
     pub(super) fn parse_ghostty(text: &str) -> Result<Self> {
-        let mut theme = Self::default();
+        let mut theme = Self::neutral();
         let mut cursor_set = false;
         for (index, line) in text.lines().enumerate() {
             let line = line.trim();

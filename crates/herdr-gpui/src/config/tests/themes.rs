@@ -8,11 +8,13 @@ fn primary_selection_text_contrasts_in_every_builtin_theme() {
     };
     for name in Theme::BUILTIN_NAMES {
         let theme = Theme::builtin(name).unwrap_or_else(|| panic!("missing theme {name}"));
-        assert_eq!(
-            theme.primary(),
-            theme.palette[5],
-            "{name}: accent is ANSI 5"
-        );
+        // The default theme ships its own accent; every other one uses ANSI 5.
+        let accent = if *name == "Default" {
+            0xa99be0
+        } else {
+            theme.palette[5]
+        };
+        assert_eq!(theme.primary(), accent, "{name}: accent");
         // The tab fill is the softened wash, not the raw accent.
         let primary = theme.primary_wash();
         let text = theme.text_on(primary);
@@ -168,7 +170,7 @@ fn default_palette_and_builtins() -> anyhow::Result<()> {
     assert_eq!(default.palette[231], 0xffffff);
     assert_eq!(default.palette[232], 0x080808);
     assert_eq!(default.palette[255], 0xeeeeee);
-    assert_eq!(default.surface, 0x1c1c22);
+    assert_eq!(default.surface, 0x2b2d31);
     for name in ["Nord", "Dracula", "Catppuccin Mocha", "Catppuccin Latte"] {
         let theme = Config {
             theme: name.into(),

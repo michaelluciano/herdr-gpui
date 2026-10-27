@@ -705,7 +705,7 @@ impl HerdrWindow {
             .text_color(rgb(theme.foreground))
             .bg(self.fill().panel(theme.sidebar_background()))
             .border_r_1()
-            .border_color(rgb(theme.active))
+            .border_color(rgb(theme.tokens().line))
             // Zero flex bases keep long workspace lists from displacing agents.
             .child(
                 div()
@@ -800,7 +800,7 @@ impl HerdrWindow {
                             .flex_none()
                             .cursor(CursorStyle::ResizeUpDown)
                             .border_t_1()
-                            .border_color(rgb(theme.active))
+                            .border_color(rgb(theme.tokens().line))
                             .hover(|s| s.bg(rgba(crate::panel_resize::RESIZE_HOVER)))
                             .on_mouse_down(
                                 MouseButton::Left,

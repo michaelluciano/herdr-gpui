@@ -381,10 +381,26 @@ impl SidebarLook {
             .rounded(px(raised.radius));
         match self.density.highlight {
             Highlight::Fill => {
-                let active = raised.fill;
+                let hover = rgb(self.hover_fill(theme));
+                let edge = self.selected_edge(theme);
                 layer
-                    .when(focused || highlighted, |layer| layer.bg(active))
-                    .group_hover(ROW_GROUP, move |s| s.bg(active))
+                    .when(highlighted, |layer| layer.bg(hover))
+                    .when(focused, |layer| {
+                        layer.bg(rgb(self.selected_fill(theme))).children(edge.map(
+                            |(width, color)| {
+                                div()
+                                    .absolute()
+                                    .left_0()
+                                    .top_0()
+                                    .bottom_0()
+                                    .w(px(width))
+                                    .bg(rgb(color))
+                            },
+                        ))
+                    })
+                    .when(!focused, |layer| {
+                        layer.group_hover(ROW_GROUP, move |s| s.bg(hover))
+                    })
             }
             Highlight::Outline => {
                 let hover = quiet.fill;
@@ -402,6 +418,20 @@ impl SidebarLook {
         }
     }
 
+    /// Width and color of the accent edge on the selected row. Outline rows
+    /// mark selection with their border instead.
+    pub(super) fn selected_edge(&self, theme: &Theme) -> Option<(f32, u32)> {
+        (self.density.highlight == Highlight::Fill).then(|| (SELECTED_EDGE, theme.tokens().accent))
+    }
+
+    pub(super) fn selected_fill(&self, theme: &Theme) -> u32 {
+        theme.tokens().selected
+    }
+
+    pub(super) fn hover_fill(&self, theme: &Theme) -> u32 {
+        theme.tokens().hover
+    }
+
     /// Fill, stroke, and corner of a workspace badge. `raised` is the
     /// selected badge, the chip around the focused workspace number. A
     /// resting badge uses the same washes one step quieter. The collapsed
@@ -410,7 +440,8 @@ impl SidebarLook {
         let washes = outline_washes(theme);
         match self.density.highlight {
             Highlight::Fill => BadgeChrome {
-                fill: rgb(theme.active).opacity(self.mark * if raised { 1. } else { BADGE_REST }),
+                fill: rgb(theme.tokens().selected)
+                    .opacity(self.mark * if raised { 1. } else { BADGE_REST }),
                 border: rgba(0),
                 radius: self.density.radius,
             },
@@ -456,12 +487,13 @@ impl SidebarLook {
             .border_color(rgba(0));
         match self.density.highlight {
             Highlight::Fill => {
-                // As on rows, hover and focus share the active color.
-                let fill = Hsla::from(rgb(theme.active)).opacity(self.mark);
+                let tokens = theme.tokens();
+                let selected = Hsla::from(rgb(tokens.selected)).opacity(self.mark);
+                let hover = Hsla::from(rgb(tokens.hover)).opacity(self.mark);
                 if active {
-                    field.bg(fill)
+                    field.bg(selected)
                 } else {
-                    field.hover(move |s| s.bg(fill))
+                    field.hover(move |s| s.bg(hover))
                 }
             }
             Highlight::Outline => {
@@ -537,7 +569,7 @@ impl SidebarLook {
             .bottom(edge)
             .rounded(px(self.density.radius.max(LIFT_RADIUS)))
             .bg(rgb(match self.density.highlight {
-                Highlight::Fill if focused => theme.active,
+                Highlight::Fill if focused => theme.tokens().selected,
                 _ => theme.sidebar_background(),
             }))
             .when(self.density.highlight == Highlight::Outline, |card| {
@@ -550,6 +582,12 @@ impl SidebarLook {
             .shadow_lg()
     }
 }
+
+/// Width of the accent edge on the selected row of a filled highlight.
+const SELECTED_EDGE: f32 = 2.;
+
+#[cfg(test)]
+mod selected_tests;
 
 /// How far a resting fill badge steps down from the selected one: the
 /// outline hover wash over its selected wash.

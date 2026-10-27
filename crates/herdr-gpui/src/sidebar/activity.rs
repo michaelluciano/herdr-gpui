@@ -411,7 +411,7 @@ impl HerdrWindow {
             .py(px(6.))
             .bg(self.fill().panel(theme.sidebar_background()))
             .border_r_1()
-            .border_color(rgb(theme.active));
+            .border_color(rgb(theme.tokens().line));
         let shown = self.activity_panel();
         for &panel in ActivityPanel::ALL {
             if !self.activity_panel_listed(panel) {
@@ -604,7 +604,7 @@ impl HerdrWindow {
             .text_color(rgb(theme.subtext()))
             .bg(self.fill().panel(theme.sidebar_background()))
             .border_r_1()
-            .border_color(rgb(theme.active))
+            .border_color(rgb(theme.tokens().line))
             .when(expanded, |title| {
                 title.child(
                     div()

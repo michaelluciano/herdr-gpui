@@ -216,8 +216,8 @@ fn host_theme_reaches_each_connection_and_follows_theme_changes(cx: &mut gpui::T
         theme.foreground,
         ClientHostColor {
             r: 0xd8,
-            g: 0xde,
-            b: 0xe9
+            g: 0xda,
+            b: 0xdf
         }
     );
     assert_eq!(

@@ -54,6 +54,7 @@ pub(crate) mod tab_layout;
 mod table;
 pub(crate) use sidebar_style::parse_hex;
 mod theme;
+pub(crate) mod theme_tokens;
 mod updates;
 pub(crate) mod watch;
 mod worktrees;

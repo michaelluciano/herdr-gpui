@@ -24,6 +24,7 @@ fn colors_follow_primary_and_contrast_in_every_theme() {
                 );
             }
             // Shared/custom themes can use a dark purple accent even on light chrome.
+            theme.accent = None;
             theme.palette[5] = 0x8839ef;
             let (fill, ink) = colors(&theme, true);
             assert_eq!(fill, 0x8839ef);

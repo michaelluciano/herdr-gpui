@@ -120,7 +120,9 @@ mod tests {
         }
         // The dark normal red it replaces read as a dim grey-pink.
         let theme = crate::config::Theme::default();
-        assert!(contrast(danger(&theme), rgb(theme.surface)) > 6.);
+        // The soft dark panel is lighter than the old one, so red reads a little
+        // less strongly on it; still well above the 4.5 text minimum.
+        assert!(contrast(danger(&theme), rgb(theme.surface)) > 5.);
     }
 
     #[test]
