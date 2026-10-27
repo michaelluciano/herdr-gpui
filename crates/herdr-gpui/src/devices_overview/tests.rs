@@ -6,6 +6,7 @@ mod history;
 mod model;
 mod narrow_layout;
 mod page;
+mod status_dots;
 
 use crate::{
     HerdrWindow,

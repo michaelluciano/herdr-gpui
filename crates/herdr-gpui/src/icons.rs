@@ -280,7 +280,6 @@ embedded_icons! {
     "shield.svg",
     "split.svg",
     "status-bar.svg",
-    "status-orbit.svg",
     "status-orca-blocked.svg",
     "status-orca-working.svg",
     "tabs.svg",

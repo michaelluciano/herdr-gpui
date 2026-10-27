@@ -13,7 +13,7 @@ pub(super) const HOVER_MENU_SLOP: f32 = 3.;
 pub(super) const ROW_PADDING: f32 = 12.;
 pub(crate) const STATUS_WIDTH: f32 = 8.;
 // Unknown stays a smaller dot so it reads as "no reported status" next to the full ones.
-pub(super) const STATUS_DOT_UNKNOWN: f32 = 3.;
+pub(crate) const STATUS_DOT_UNKNOWN: f32 = 3.;
 pub(crate) const LABEL_GAP: f32 = 8.;
 // Children clear the gutter their tree lines run in, which starts at the
 // parent's label column so the trunk lines up under the parent's branch.

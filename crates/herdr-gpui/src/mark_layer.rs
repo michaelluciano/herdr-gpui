@@ -596,7 +596,7 @@ mod tests {
             );
             (sidebar.read(cx).renders, layer.read(cx).renders)
         });
-        assert!(cx.debug_bounds("status-orbit").is_some());
+        assert!(cx.debug_bounds("status-dot-pulse").is_some());
         for _ in 0..4 {
             cx.executor().advance_clock(Duration::from_millis(150));
             cx.update(|window, cx| {
@@ -609,6 +609,6 @@ mod tests {
             assert_eq!(sidebar.read(cx).renders, renders);
             assert!(layer.read(cx).renders >= layer_renders + 4);
         });
-        assert!(cx.debug_bounds("status-orbit").is_some());
+        assert!(cx.debug_bounds("status-dot-pulse").is_some());
     }
 }

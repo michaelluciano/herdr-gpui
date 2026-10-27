@@ -44,7 +44,7 @@ fn every_set_has_a_card_whose_working_mark_moves(cx: &mut TestAppContext) {
         assert!(bounds.right() <= sets.right(), "{set:?} {bounds:?}");
     }
     for selector in [
-        "status-orbit",
+        "status-dot-pulse",
         "status-spin",
         "status-wave",
         "status-chase",

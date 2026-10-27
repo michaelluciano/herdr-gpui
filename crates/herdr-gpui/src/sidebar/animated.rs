@@ -9,7 +9,7 @@ mod grid;
 mod orca;
 
 use super::STATUS_DOT_UNKNOWN;
-use crate::config::StatusIcons;
+use crate::{config::StatusIcons, status_dot::Dot};
 use gpui::{prelude::*, *};
 use herdr_client::protocol::AgentStatus;
 use std::time::Duration;
@@ -30,8 +30,8 @@ pub(super) fn mark(set: StatusIcons, status: AgentStatus, size: f32, color: u32)
         StatusIcons::Wave => grid::mark(status, size, color),
         StatusIcons::Orca => orca::mark(status, size, color),
         StatusIcons::Braille => braille_set(status, size, color),
-        // The other sets load assets; only Dots' settled marks land here.
-        _ => herdr_dot(status, size, color),
+        // The other sets load assets; only Dots lands here.
+        _ => Dot::new(status, color).drawn(size),
     }
 }
 
@@ -59,21 +59,6 @@ fn braille_set(status: AgentStatus, size: f32, color: u32) -> AnyElement {
         AgentStatus::Done => still("status-braille-done", "⠿"),
         AgentStatus::Idle => still("status-braille-idle", "⠒"),
         AgentStatus::Unknown => still("status-braille-unknown", "⠂"),
-    }
-}
-
-/// Herdr's dot at `size`: filled, hollow for idle, small for unknown.
-fn herdr_dot(status: AgentStatus, size: f32, color: u32) -> AnyElement {
-    match status {
-        AgentStatus::Unknown => disc(STATUS_DOT_UNKNOWN, color).into_any_element(),
-        AgentStatus::Idle => div()
-            .size(px(size))
-            .flex_none()
-            .rounded_full()
-            .border_1()
-            .border_color(rgb(color))
-            .into_any_element(),
-        _ => disc(size, color).into_any_element(),
     }
 }
 
