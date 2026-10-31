@@ -240,8 +240,14 @@ impl Store {
 
     fn with_tabs(mut tabs: Vec<Tab>, writer: Option<state_file::Writer<Saved>>) -> Self {
         // Earlier builds hosted the orchestrator in a tab; its sections now
-        // own it, so such tabs are dropped rather than restored.
-        tabs.retain(|tab| !matches!(tab.location, Some(Location::Orchestrator { .. })));
+        // own it, so such tabs are dropped rather than restored. A graph tab
+        // is not saved either: it reads its commits afresh when opened.
+        tabs.retain(|tab| {
+            !matches!(
+                tab.location,
+                Some(Location::Orchestrator { .. } | Location::Graph { .. })
+            )
+        });
         let next = tabs.iter().map(|tab| tab.id.0 + 1).max().unwrap_or(0);
         Self {
             tabs,

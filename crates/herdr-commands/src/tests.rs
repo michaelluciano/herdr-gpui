@@ -1,5 +1,7 @@
 use super::*;
 
+mod graph;
+
 fn snapshot() -> ClientShellSnapshot {
     serde_json::from_str(include_str!(
         "../../herdr-protocol/tests/fixtures/endpoint-snapshot-v1.json"
@@ -118,6 +120,7 @@ fn catalog_has_all_native_commands_and_gpui_shortcuts() {
         (NewBrowserTab, &["cmd-shift-b"]),
         (OpenOrchestrator, &[]),
         (ReviewChanges, &[]),
+        (OpenGraph, &[]),
         (GitMenu, &[]),
         (ToggleAnnotate, &[]),
         (InstallBrowserSkill, &[]),

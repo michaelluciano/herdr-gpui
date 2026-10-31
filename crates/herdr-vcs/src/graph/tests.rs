@@ -4,6 +4,7 @@
 
 use super::*;
 
+mod changes;
 mod layout;
 mod parse;
 mod run;

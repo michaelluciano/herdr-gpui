@@ -774,6 +774,9 @@ impl Render for HerdrWindow {
                         Some(crate::browser::Location::Devices) => {
                             self.render_devices_tab(slot, &tab, cx)
                         }
+                        Some(crate::browser::Location::Graph { .. }) => {
+                            self.render_graph_tab(slot, &tab, window, cx)
+                        }
                         _ => self.render_review_tab(slot, &tab, cx),
                     }
                 }

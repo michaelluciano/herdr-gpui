@@ -3,8 +3,8 @@
 `herdr-gpui` is also a command line for the running Herdr UI. Herdr's own
 `herdr` CLI drives the daemon: workspaces, terminal tabs, panes, agents,
 worktrees, and notifications. `herdr-gpui COMMAND` covers what only this
-client knows or draws: its windows, its own tabs (pages, code, reviews,
-Devices), the activity bar's sections, worktree notes, checkpoints, forwarded
+client knows or draws: its windows, its own tabs (pages, code, reviews, the
+Git graph, Devices), the activity bar's sections, worktree notes, checkpoints, forwarded
 ports, and its settings.
 
 Commands reach the app over a socket of its own,
@@ -93,7 +93,7 @@ Herdr UI** entry, which both Windows installers add, runs this command through
 
 | Command | What it does |
 | --- | --- |
-| `tab [list]` | Pages, code, reviews, and Devices tabs with IDs |
+| `tab [list]` | Pages, code, reviews, Git graph, and Devices tabs with IDs |
 | `tab focus\|close ID` | |
 | `browser open\|reload\|feedback` | See [browser tabs](../crates/herdr-gpui/README.md#browser-tabs) |
 | `browser list` | Page tabs only |
@@ -108,6 +108,7 @@ Herdr UI** entry, which both Windows installers add, runs this command through
 | `orchestrator [--repo PATH]` | Show the Issues section narrowed to your checkout's project, or PATH's |
 | `orchestrator items\|issues\|prs` | What it last synced, from its local database (no app needed) |
 | `review` | The review of your workspace's uncommitted changes |
+| `graph [open]` | The read-only Git graph of your workspace's checkout. Fails when the workspace has no local Git checkout |
 | `px0 [open]` | Open or focus px0 on your local workspace's checkout (macOS and Windows) |
 
 `px0 open` reuses one editor tab per workspace. It discovers a local px0

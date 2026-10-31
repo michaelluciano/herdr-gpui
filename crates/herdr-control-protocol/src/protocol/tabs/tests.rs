@@ -2,6 +2,8 @@
 use super::*;
 use crate::protocol::{Call, Caller, Request, Response};
 
+mod graph;
+
 fn round_trip(op: TabOp) {
     let request = Request::Tab(Call {
         caller: Caller::default(),
@@ -49,6 +51,7 @@ fn tab_operations_round_trip() {
             repo: Some("/src".into()),
         },
         TabOp::Review,
+        TabOp::Graph,
     ] {
         round_trip(op);
     }
@@ -160,6 +163,7 @@ fn kinds_are_named_as_json_spells_them() {
         TabKind::Review,
         TabKind::Orchestrator,
         TabKind::Devices,
+        TabKind::Graph,
         TabKind::Editor,
     ] {
         assert_eq!(

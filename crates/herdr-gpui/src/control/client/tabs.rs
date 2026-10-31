@@ -1,4 +1,4 @@
-//! `tab`, `code`, `devices`, `orchestrator`, and `review`.
+//! `tab`, `code`, `devices`, `orchestrator`, `review`, and `graph`.
 mod items;
 
 use super::{Context, Output, unexpected};
@@ -163,6 +163,11 @@ pub(super) fn orchestrator(
         }
         OrchestratorCommand::Items { repo, items } => items::list(repo.as_deref(), items),
     }
+}
+
+pub(super) fn graph(context: &Context) -> crate::Result<Output> {
+    let response = context.call(Request::Tab, TabOp::Graph)?;
+    opened("the Git graph", response)
 }
 
 pub(super) fn review(context: &Context) -> crate::Result<Output> {

@@ -52,6 +52,7 @@ impl HerdrWindow {
                     (_, Some(Location::Code { .. })) => "icons/code.svg",
                     (_, Some(Location::Orchestrator { .. })) => "icons/pulse.svg",
                     (_, Some(Location::Devices)) => "icons/devices.svg",
+                    (_, Some(Location::Graph { .. })) => "icons/git-branch.svg",
                     _ => GLOBE,
                 };
                 // A page's own icon stands in for the globe.

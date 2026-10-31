@@ -64,6 +64,8 @@ pub enum ControlCommand {
     Devices,
     Orchestrator(OrchestratorCommand),
     Review,
+    /// Open the read-only Git graph of the caller's checkout.
+    Graph,
     Chat(ChatCommand),
     Px0,
     Notes(NotesCommand),
@@ -164,6 +166,7 @@ pub const FAMILIES: &[(&str, &str)] = &[
         "A repository's issues, pull requests, and runs",
     ),
     ("review", "Open the review of the uncommitted changes"),
+    ("graph", "Open the Git graph of the checkout"),
     (
         "chat",
         "Native views of herdr-acp chats: start one, list them, show or hide one",
@@ -332,6 +335,10 @@ fn command(family: &'static str, args: &mut Args) -> Result<ControlCommand, CliE
         "review" => {
             tabs::open_only(args)?;
             ControlCommand::Review
+        }
+        "graph" => {
+            tabs::open_only(args)?;
+            ControlCommand::Graph
         }
         "chat" => ControlCommand::Chat(chat::chat(args)?),
         "px0" => {

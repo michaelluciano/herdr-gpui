@@ -15,6 +15,8 @@ pub enum Field {
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     // keep-sorted start
+    #[error("A commit id must be 4 to 64 lowercase hex characters.")]
+    InvalidCommit,
     #[error("The history window must be between 1 and {max} commits.")]
     Limit { max: u32 },
     #[error("Log record {index} is malformed ({field:?}).")]

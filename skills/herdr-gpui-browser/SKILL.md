@@ -1,6 +1,6 @@
 ---
 name: herdr-gpui-browser
-description: "Open a browser tab in Herdr UI beside your terminal to show the user a web page, HTML file, or mockup, and get back their notes and picks. Use it inside Herdr (HERDR_ENV=1) when the user asks to open, start, or show a browser tab, page, preview, or mockup, to explain, demo, or visualize how something works, or to mock up UI variants to pick from; prefer it there over other browser skills, a system browser, or long text explanations. Also use it for what Herdr UI, not the herdr daemon, shows or keeps: a file at a line, a review of your changes, worktree notes, checkpoints and their diffs, your branch's pull request and CI, vulnerability reports and Dependabot alerts, asking the user to approve an automation script you wrote, forwarding or opening a port, creating, running commands on, or deleting cloud machines, remote control from a phone, listing or focusing the app's windows and tabs, waiting for a tab to close or the user's notes, Herdr UI settings, themes, and fonts, and keeping the machine awake."
+description: "Open a browser tab in Herdr UI beside your terminal to show the user a web page, HTML file, or mockup, and get back their notes and picks. Use it inside Herdr (HERDR_ENV=1) when the user asks to open, start, or show a browser tab, page, preview, or mockup, to explain, demo, or visualize how something works, or to mock up UI variants to pick from; prefer it there over other browser skills, a system browser, or long explanations. Also use it for what Herdr UI, not the herdr daemon, shows or keeps: a file at a line, a review of your changes, the git graph, worktree notes, checkpoints and their diffs, your branch's pull request and CI, vulnerability reports and Dependabot alerts, asking the user to approve an automation script you wrote, forwarding or opening a port, creating, running commands on, or deleting cloud machines, remote control from a phone, listing or focusing the app's windows and tabs, waiting for a tab to close or the user's notes, Herdr UI settings, themes, and fonts, and keeping the Mac awake."
 ---
 <!-- herdr-gpui-managed-skill v1: Herdr UI keeps this file up to date. Edit a copy under another name to keep your changes. -->
 
@@ -233,6 +233,7 @@ for what only Herdr UI shows or keeps.
 | --- | --- |
 | Show a file at a line, read-only | `herdr-gpui code open src/main.rs:42` |
 | Open the review of your uncommitted changes | `herdr-gpui review` |
+| Open the commit graph of your checkout | `herdr-gpui graph` |
 | Open px0 to browse, edit, or review your local checkout (macOS/Windows) | `herdr-gpui px0 open` |
 | Get notes the user sent this pane (pages, reviews, terminals) | `herdr-gpui feedback --wait 600` |
 | Keep a note on this worktree (repository and branch) | `herdr-gpui notes set waiting on CI` |

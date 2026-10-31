@@ -83,6 +83,8 @@ pub enum Command {
     OpenOrchestrator,
     /// A review of the focused checkout's changes.
     ReviewChanges,
+    /// The read-only commit graph of the focused checkout.
+    OpenGraph,
     /// The titlebar's Git menu for the focused checkout.
     GitMenu,
     /// Annotate mode on the page in view.
@@ -670,6 +672,11 @@ pub const COMMANDS: &[CommandInfo] = &[
         label: "Review Changes",
     },
     CommandInfo {
+        command: Command::OpenGraph,
+        name: "open_graph",
+        label: "Show Git Graph",
+    },
+    CommandInfo {
         command: Command::GitMenu,
         name: "git_menu",
         label: "Git Menu",
@@ -893,6 +900,7 @@ pub fn request(command: Command, snapshot: &ClientShellSnapshot) -> Option<(Meth
         | Command::NewBrowserTab
         | Command::OpenOrchestrator
         | Command::ReviewChanges
+        | Command::OpenGraph
         | Command::GitMenu
         | Command::ToggleAnnotate
         | Command::InstallBrowserSkill

@@ -330,6 +330,7 @@ impl HerdrWindow {
                 | Command::NewBrowserTab
                 | Command::OpenOrchestrator
                 | Command::ReviewChanges
+                | Command::OpenGraph
                 | Command::GitMenu
                 | Command::ToggleAnnotate
                 | Command::SplitEditor
