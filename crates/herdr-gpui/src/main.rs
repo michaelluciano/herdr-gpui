@@ -68,6 +68,7 @@ mod github;
 mod graph_view;
 mod group_menu;
 mod group_terminals;
+mod handoffs;
 mod herdr_settings;
 mod icon_font_notice;
 mod icons;

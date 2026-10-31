@@ -41,6 +41,8 @@ mod devices_layout;
 #[cfg(test)]
 mod gpu_line;
 #[cfg(test)]
+mod handoffs;
+#[cfg(test)]
 mod host_agents;
 #[cfg(test)]
 mod host_groups;
@@ -605,11 +607,12 @@ pub(crate) fn fixture_window(window: &mut Window, cx: &mut Context<HerdrWindow>)
         config_load_revision: 0,
         git: Default::default(),
         git_anchor: Default::default(),
-        deliveries: Default::default(),
-        terminal_notes: Default::default(),
         graph_focus: Default::default(),
         graph_scroll: Default::default(),
         graphs: Default::default(),
+        handoffs: Default::default(),
+        deliveries: Default::default(),
+        terminal_notes: Default::default(),
         notes_width: crate::panel_resize::NOTES,
         notice_overflow: Default::default(),
         review_files_width: crate::panel_resize::REVIEW_FILES,

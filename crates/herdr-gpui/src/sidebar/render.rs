@@ -843,6 +843,7 @@ impl HerdrWindow {
                             .child(agents),
                     )
             })
+            .children(self.handoffs_section(devices, look, cx))
             .map(|sidebar| {
                 if self.device_footer_shown() {
                     sidebar.child(self.render_device_footer(cx))

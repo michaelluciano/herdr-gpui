@@ -217,6 +217,8 @@ pub(crate) struct HerdrWindow {
         std::collections::HashMap<crate::browser::TabId, UniformListScrollHandle>,
     /// Unknown keys in the GUI config, ignored but reported; follows `config`.
     pub(crate) gui_config_diagnostic: crate::config_diagnostic::ConfigDiagnostic,
+    /// The open session handoffs the sidebar lists, and when they were read.
+    pub(crate) handoffs: crate::handoffs::Handoffs,
     pub(crate) held_keys: crate::terminal::HeldKeys,
     /// The sidebar row the pointer is resting on, waiting to open its menu.
     pub(crate) hover: Option<sidebar::HoverRest>,
@@ -675,9 +677,10 @@ impl HerdrWindow {
             cx.notify();
         }
         self.poll_devices_overview(cx);
+        self.poll_graphs(cx);
+        self.poll_handoffs(cx);
         self.poll_overview(cx);
         self.poll_security(cx);
-        self.poll_graphs(cx);
         self.poll_automations(cx);
         if self.update_system_load() {
             cx.notify();
