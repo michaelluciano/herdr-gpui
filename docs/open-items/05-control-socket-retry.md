@@ -1,6 +1,6 @@
 # Control socket never retries its bind
 
-Status: bug
+Status: bug (tracked by a draft PR; no code yet)
 
 ## Problem
 
