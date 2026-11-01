@@ -1,4 +1,4 @@
-//! Tests of the handoff list, its classification, and its refresh.
+//! Tests of the handoff list, its classification, its refresh, and its click target.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use super::*;
@@ -8,6 +8,7 @@ mod classify;
 mod line;
 mod list;
 mod poll;
+mod target;
 
 /// Real header shape of a session handoff, copied from the handoffs root.
 pub(super) const CLAUDE_SETUP_HEADER: &str = "---\nid: S-2026-10-31-e8da4cd3\nparent: P-claude-setup\nprev: \nsession_id: e8da4cd3-a82f-45cf-83fc-da30f6606ae9\ncreated: 2026-10-31T13:41:42\nstatus: open\nctx_at_write: 0\nreason: manual\n---\n## Remaining work\nBody text.\n";

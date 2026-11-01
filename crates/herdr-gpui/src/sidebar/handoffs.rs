@@ -6,7 +6,7 @@ use super::{
 };
 use crate::{
     HerdrWindow,
-    handoffs::{Handoff, Shelf, detail},
+    handoffs::{Handoff, Shelf, detail, target_for},
     window::{Flash, chrome_focus::Region},
 };
 use gpui::{ClipboardItem, prelude::*, *};
@@ -185,7 +185,8 @@ impl HerdrWindow {
         self.show_flash(Flash::success(format!("Copied {text}")), cx);
     }
 
-    /// One handoff row. A history row is dimmer and names why it is there.
+    /// One handoff row. A click copies its path; a right-click opens the file
+    /// in a code tab. A history row is dimmer and names why it is there.
     fn row(
         &self,
         slot: (&'static str, usize),
@@ -197,6 +198,7 @@ impl HerdrWindow {
         let (prefix, index) = slot;
         let theme = &self.theme;
         let path: PathBuf = handoff.path.clone();
+        let target = target_for(handoff);
         let id_color = match shelf {
             None => theme.subtext(),
             Some(_) => theme.muted,
@@ -219,6 +221,13 @@ impl HerdrWindow {
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.copy_handoff_path(&path, cx);
             }))
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(move |this, _: &MouseDownEvent, window, cx| {
+                    cx.stop_propagation();
+                    this.open_code_view(&target, window, cx);
+                }),
+            )
             .child(
                 div()
                     .truncate()

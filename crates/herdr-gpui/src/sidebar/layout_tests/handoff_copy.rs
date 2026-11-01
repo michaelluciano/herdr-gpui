@@ -11,7 +11,7 @@ use crate::{
 use gpui::{Entity, Modifiers, VisualTestContext};
 
 /// Clicks the centre of the element `selector`, then redraws the window.
-fn click(cx: &mut VisualTestContext, selector: &'static str) {
+pub(super) fn click(cx: &mut VisualTestContext, selector: &'static str) {
     let bounds = cx
         .debug_bounds(selector)
         .unwrap_or_else(|| panic!("no {selector}"));
@@ -34,7 +34,7 @@ fn flash(view: &Entity<HerdrWindow>, cx: &mut VisualTestContext) -> Option<Strin
 }
 
 /// The file of every code tab open in the store.
-fn code_paths(cx: &mut VisualTestContext) -> Vec<String> {
+pub(super) fn code_paths(cx: &mut VisualTestContext) -> Vec<String> {
     cx.update(|_, cx| {
         cx.try_global::<Store>().map_or_else(Vec::new, |store| {
             store

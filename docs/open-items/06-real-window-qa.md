@@ -9,7 +9,7 @@ Confirm in a real window the behavior that unit tests do not cover. These checks
 ## Checks
 
 - The git graph gutter is 96 px wide (`GUTTER_CAP` in `crates/herdr-gpui/src/graph_view/geometry.rs`).
-- Clicking a handoff row copies its absolute path to the clipboard and flashes it.
+- Clicking a handoff row copies its absolute path to the clipboard and flashes it. Right-clicking a handoff row (active or picked up/superseded) opens its `.md` file in a code tab.
 - Clicking a stopped Mac launcher row shows "starting", starts the model, and opens its web UI.
 - Clicking a running launcher row only opens the UI.
 - A blocked (gray) launcher row flashes the name of the model holding the slot and starts nothing.
