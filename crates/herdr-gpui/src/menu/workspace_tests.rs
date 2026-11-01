@@ -23,6 +23,7 @@ mod sandbox_dispatch;
 ))]
 mod sandbox_images;
 mod scripts;
+mod session_copy;
 mod targets;
 mod tiles;
 mod worktree_create;

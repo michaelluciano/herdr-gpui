@@ -35,6 +35,9 @@ struct Target {
     repository: Option<carry::PaneRepository>,
     /// Other devices the pane can move to, listed after `choices`.
     devices: Vec<carry::Device>,
+    /// The agent session chat discovery verified in the pane, which the
+    /// "Copy session id" row copies.
+    session: Option<crate::session_copy::Session>,
 }
 
 impl Target {
@@ -64,6 +67,7 @@ impl Target {
             choices: crate::pane_move::choices(snapshot, &pane.tab_id),
             repository: carry::PaneRepository::of(snapshot, &pane.workspace_id),
             devices: Vec::new(),
+            session: None,
         };
         target.validate(snapshot).ok()?;
         Some(target)
@@ -106,6 +110,8 @@ enum Action {
     MoveTo,
     EditScrollback,
     RightClick,
+    /// Copies the pane's agent session id.
+    CopySession,
     Processes,
     Close,
 }
@@ -145,32 +151,40 @@ impl Action {
             | Self::MoveToNewWorkspace
             | Self::MoveTo
             | Self::EditScrollback
+            | Self::CopySession
             | Self::Processes
             | Self::Close => return None,
         })
     }
 
-    fn label(self, target: &Target) -> &'static str {
+    fn label(self, target: &Target) -> SharedString {
         match self {
-            Self::Rename => "Rename",
-            Self::SplitRight => "Split Right",
-            Self::SplitDown => "Split Down",
-            Self::Swap => "Swap with Focused Pane",
-            Self::Zoom if target.zoomed => "Unzoom",
-            Self::Zoom => "Zoom",
-            Self::MoveToNewTab => "Move to New Tab",
-            Self::MoveToNewWorkspace => "Move to New Workspace",
-            Self::MoveTo => "Move to\u{2026}",
-            Self::EditScrollback => "Open Scrollback in Editor",
-            Self::RightClick if target.right_click_passthrough => "Open This Menu on Right-Click",
-            Self::RightClick => "Send Right-Clicks to Pane",
-            Self::Processes => "Processes",
-            Self::Close => "Close",
+            Self::Rename => "Rename".into(),
+            Self::SplitRight => "Split Right".into(),
+            Self::SplitDown => "Split Down".into(),
+            Self::Swap => "Swap with Focused Pane".into(),
+            Self::Zoom if target.zoomed => "Unzoom".into(),
+            Self::Zoom => "Zoom".into(),
+            Self::MoveToNewTab => "Move to New Tab".into(),
+            Self::MoveToNewWorkspace => "Move to New Workspace".into(),
+            Self::MoveTo => "Move to\u{2026}".into(),
+            Self::EditScrollback => "Open Scrollback in Editor".into(),
+            Self::RightClick if target.right_click_passthrough => {
+                "Open This Menu on Right-Click".into()
+            }
+            Self::RightClick => "Send Right-Clicks to Pane".into(),
+            Self::CopySession => target
+                .session
+                .as_ref()
+                .map_or_else(String::new, crate::session_copy::Session::label)
+                .into(),
+            Self::Processes => "Processes".into(),
+            Self::Close => "Close".into(),
         }
     }
 }
 
-const ACTIONS: [Action; 12] = [
+const ACTIONS: &[Action] = &[
     Action::Rename,
     Action::SplitRight,
     Action::SplitDown,
@@ -181,6 +195,7 @@ const ACTIONS: [Action; 12] = [
     Action::MoveTo,
     Action::EditScrollback,
     Action::RightClick,
+    Action::CopySession,
     Action::Processes,
     Action::Close,
 ];
@@ -192,7 +207,8 @@ impl PaneMenu {
     /// processes on this machine.
     fn actions(&self) -> Vec<Action> {
         ACTIONS
-            .into_iter()
+            .iter()
+            .copied()
             .filter(|action| match action {
                 Action::Swap => self.target.focused.is_some(),
                 Action::MoveToNewTab | Action::MoveToNewWorkspace => self.movable,
@@ -200,6 +216,7 @@ impl PaneMenu {
                     self.movable
                         && !(self.target.choices.is_empty() && self.target.devices.is_empty())
                 }
+                Action::CopySession => self.target.session.is_some(),
                 Action::Processes => self.daemon.is_some(),
                 _ => true,
             })
@@ -269,6 +286,7 @@ impl HerdrWindow {
             return;
         };
         target.devices = self.carry_devices(target.repository.as_ref());
+        target.session = crate::session_copy::of_pane(self.chats.existing.bindings(), id);
         if !self.open_menu(window, cx) {
             return;
         }
@@ -433,6 +451,12 @@ impl HerdrWindow {
                 {
                     self.present_close(close, window, cx);
                 }
+            }
+            Action::CopySession => {
+                if let Some(session) = &target.session {
+                    self.copy_session_id(&session.id, cx);
+                }
+                self.dismiss_menu(window, cx);
             }
             Action::Processes => self.open_pane_processes(cx),
             Action::EditScrollback => {

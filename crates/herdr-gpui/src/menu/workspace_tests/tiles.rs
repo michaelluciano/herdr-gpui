@@ -1,10 +1,21 @@
 use super::*;
 use crate::menu::workspace::popover::{Tile, layout};
+use gpui::SharedString;
+
+/// The menu items a test lays out, with their labels as the menu holds them.
+fn labelled<const N: usize>(
+    items: [(WorkspaceMenuAction, &'static str); N],
+) -> Vec<(WorkspaceMenuAction, SharedString)> {
+    items
+        .into_iter()
+        .map(|(action, label)| (action, label.into()))
+        .collect()
+}
 
 fn tile(action: WorkspaceMenuAction, label: &'static str, enabled: bool) -> Tile {
     Tile {
         action,
-        label,
+        label: label.into(),
         enabled,
     }
 }
@@ -13,10 +24,10 @@ fn tile(action: WorkspaceMenuAction, label: &'static str, enabled: bool) -> Tile
 fn every_slot_keeps_its_place_and_grays_what_is_unavailable() {
     use WorkspaceMenuAction::*;
     // A plain checkout: no worktree, fan-out, or teleport to offer.
-    let items = [
+    let items = labelled([
         (Dialog(WorkspaceAction::Rename), "Rename"),
         (Dialog(WorkspaceAction::Close), "Close"),
-    ];
+    ]);
     let (tiles, rest) = layout(&items);
     assert_eq!(
         tiles,
@@ -35,7 +46,7 @@ fn every_slot_keeps_its_place_and_grays_what_is_unavailable() {
 #[test]
 fn rows_and_the_destructive_action_follow_the_grid_in_order() {
     use WorkspaceMenuAction::*;
-    let items = [
+    let items = labelled([
         (Dialog(WorkspaceAction::NewWorktree), "New worktree"),
         (Dialog(WorkspaceAction::Rename), "Rename"),
         (Teleport, "Teleport..."),
@@ -47,33 +58,33 @@ fn rows_and_the_destructive_action_follow_the_grid_in_order() {
             Dialog(WorkspaceAction::DeleteWorktree),
             "Delete worktree checkout",
         ),
-    ];
+    ]);
     let (tiles, rest) = layout(&items);
     assert!(tiles[3].enabled && tiles[4].enabled);
     assert_eq!(tiles[4].action, TeleportBack);
     assert_eq!(tiles[5].label, "Close group");
     assert_eq!(
         rest,
-        [
+        labelled([
             (Dialog(WorkspaceAction::OpenWorktree), "Open worktree..."),
             (Collapse, "Collapse group"),
             (
                 Dialog(WorkspaceAction::DeleteWorktree),
                 "Delete worktree checkout"
             ),
-        ]
+        ])
     );
 }
 
 #[test]
 fn a_teleported_checkout_swaps_its_teleport_tiles_in_place() {
     use WorkspaceMenuAction::*;
-    let items = [
+    let items = labelled([
         (Dialog(WorkspaceAction::Rename), "Rename"),
         (GoToTeleported, "Go to teleported copy"),
         (ClearTeleported, "Clear teleported mark"),
         (Dialog(WorkspaceAction::Close), "Close"),
-    ];
+    ]);
     let (tiles, rest) = layout(&items);
     assert_eq!(
         tiles[3],
@@ -100,7 +111,7 @@ fn the_keyboard_walks_actions_in_the_order_they_are_drawn(cx: &mut gpui::TestApp
     let drawn: Vec<_> = tiles
         .iter()
         .filter(|tile| tile.enabled)
-        .map(|tile| (tile.action, tile.label))
+        .map(|tile| (tile.action, tile.label.clone()))
         .chain(rest)
         .collect();
     assert_eq!(drawn, items, "keyboard order must match the drawn order");

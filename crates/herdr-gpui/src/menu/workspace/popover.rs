@@ -40,7 +40,7 @@ const ROW_GAP: f32 = 8.;
 
 /// A row's leading icon, centred in the shared slot. An action without an
 /// icon keeps the empty slot so its label still lines up.
-fn leading_icon(action: WorkspaceMenuAction, label: &'static str, color: Rgba) -> Div {
+fn leading_icon(action: WorkspaceMenuAction, label: SharedString, color: Rgba) -> Div {
     div()
         .size(px(ICON_SLOT))
         .flex_none()
@@ -54,24 +54,27 @@ fn leading_icon(action: WorkspaceMenuAction, label: &'static str, color: Rgba) -
                     .size(px(ICON_SIZE))
                     .flex_none()
                     .text_color(color)
-                    .debug_selector(move || format!("workspace-menu-icon-{label}")),
+                    .debug_selector({
+                        let label = label.clone();
+                        move || format!("workspace-menu-icon-{label}")
+                    }),
             )
         })
 }
 
 /// One grid cell: the action it runs, its menu label, and whether this
 /// workspace can take it now. A grayed tile keeps the grid's shape stable.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::menu) struct Tile {
     pub(in crate::menu) action: WorkspaceMenuAction,
-    pub(in crate::menu) label: &'static str,
+    pub(in crate::menu) label: SharedString,
     pub(in crate::menu) enabled: bool,
 }
 
 impl Tile {
     /// The tile's caption: the menu label, shortened where the tile's icon
     /// and position already say the rest.
-    fn caption(self) -> &'static str {
+    fn caption(&self) -> &str {
         match self.action {
             WorkspaceMenuAction::FanOut if self.label.starts_with("Fan-out") => "Comparison",
             WorkspaceMenuAction::FanOut => "Fan out",
@@ -85,8 +88,8 @@ impl Tile {
 /// Lays `items` into the grid. Items no slot takes are returned in order,
 /// for the rows beneath it.
 pub(in crate::menu) fn layout(
-    items: &[(WorkspaceMenuAction, &'static str)],
-) -> ([Tile; 6], Vec<(WorkspaceMenuAction, &'static str)>) {
+    items: &[(WorkspaceMenuAction, SharedString)],
+) -> ([Tile; 6], Vec<(WorkspaceMenuAction, SharedString)>) {
     let tiles = SLOTS.map(|(choices, fallback, label)| {
         choices
             .iter()
@@ -94,12 +97,12 @@ pub(in crate::menu) fn layout(
             .map_or(
                 Tile {
                     action: fallback,
-                    label,
+                    label: label.into(),
                     enabled: false,
                 },
-                |&(action, label)| Tile {
-                    action,
-                    label,
+                |(action, label)| Tile {
+                    action: *action,
+                    label: label.clone(),
                     enabled: true,
                 },
             )
@@ -111,7 +114,7 @@ pub(in crate::menu) fn layout(
                 .iter()
                 .any(|tile| tile.enabled && tile.action == *action)
         })
-        .copied()
+        .cloned()
         .collect();
     (tiles, rest)
 }
@@ -170,10 +173,10 @@ impl HerdrWindow {
             .p(px(2.));
         for row in tiles.chunks(COLUMNS) {
             grid = grid.child(
-                div()
-                    .flex()
-                    .gap(px(6.))
-                    .children(row.iter().map(|tile| self.render_workspace_tile(*tile, cx))),
+                div().flex().gap(px(6.)).children(
+                    row.iter()
+                        .map(|tile| self.render_workspace_tile(tile.clone(), cx)),
+                ),
             );
         }
         panel = panel.child(grid);
@@ -212,7 +215,7 @@ impl HerdrWindow {
 
     fn render_workspace_tile(&self, tile: Tile, cx: &mut Context<Self>) -> Stateful<Div> {
         let theme = &self.theme;
-        let label = tile.label;
+        let label = tile.label.clone();
         let selected = tile.enabled && self.menu.workspace_selected == Some(tile.action);
         let primary = tile.action == WorkspaceMenuAction::Dialog(WorkspaceAction::NewWorktree);
         let ink = if primary && tile.enabled {
@@ -227,13 +230,16 @@ impl HerdrWindow {
         };
         crate::accessibility::disabled(
             div()
-                .id(label)
+                .id(label.clone())
                 .role(Role::MenuItem)
-                .aria_label(label.trim_end_matches("..."))
+                .aria_label(label.trim_end_matches("...").to_owned())
                 .when(selected, |tile| tile.aria_active_descendant()),
             !tile.enabled,
         )
-        .debug_selector(move || format!("workspace-menu-{label}"))
+        .debug_selector({
+            let label = label.clone();
+            move || format!("workspace-menu-{label}")
+        })
         .flex_1()
         .min_w_0()
         .min_h(px(64.))
@@ -255,15 +261,21 @@ impl HerdrWindow {
                     .size(px(20.))
                     .flex_none()
                     .text_color(ink)
-                    .debug_selector(move || format!("workspace-menu-icon-{label}")),
+                    .debug_selector({
+                        let label = label.clone();
+                        move || format!("workspace-menu-icon-{label}")
+                    }),
             )
         })
         .child(
             div()
-                .debug_selector(move || format!("workspace-menu-label-{label}"))
+                .debug_selector({
+                    let label = label.clone();
+                    move || format!("workspace-menu-label-{label}")
+                })
                 .max_w_full()
                 .truncate()
-                .child(tile.caption()),
+                .child(tile.caption().to_owned()),
         )
         .map(|tile_div| {
             if !tile.enabled {
@@ -285,16 +297,19 @@ impl HerdrWindow {
     fn render_workspace_row(
         &self,
         action: WorkspaceMenuAction,
-        label: &'static str,
+        label: SharedString,
         cx: &mut Context<Self>,
     ) -> Stateful<Div> {
         let theme = &self.theme;
         let selected = Some(action) == self.menu.workspace_selected;
         div()
-            .id(label)
-            .debug_selector(move || format!("workspace-menu-{label}"))
+            .id(label.clone())
+            .debug_selector({
+                let label = label.clone();
+                move || format!("workspace-menu-{label}")
+            })
             .role(Role::MenuItem)
-            .aria_label(label.trim_end_matches("..."))
+            .aria_label(label.trim_end_matches("...").to_owned())
             .when(selected, |row| row.aria_active_descendant())
             .mx(px(2.))
             .min_h(px(self.config.ui.line_height() + 12.))
@@ -308,7 +323,7 @@ impl HerdrWindow {
             .on_hover(Self::workspace_hover(action, cx))
             .child(leading_icon(
                 action,
-                label,
+                label.clone(),
                 rgb(if selected {
                     theme.foreground
                 } else {
@@ -320,8 +335,11 @@ impl HerdrWindow {
                     .flex_1()
                     .min_w_0()
                     .truncate()
-                    .debug_selector(move || format!("workspace-menu-label-{label}"))
-                    .child(label),
+                    .debug_selector({
+                        let label = label.clone();
+                        move || format!("workspace-menu-label-{label}")
+                    })
+                    .child(label.clone()),
             )
             .on_click(cx.listener(move |this, _, window, cx| {
                 cx.stop_propagation();
@@ -334,17 +352,20 @@ impl HerdrWindow {
     fn render_workspace_danger(
         &self,
         action: WorkspaceMenuAction,
-        label: &'static str,
+        label: SharedString,
         cx: &mut Context<Self>,
     ) -> Stateful<Div> {
         let theme = &self.theme;
         let red = danger(theme);
         let selected = Some(action) == self.menu.workspace_selected;
         div()
-            .id(label)
-            .debug_selector(move || format!("workspace-menu-{label}"))
+            .id(label.clone())
+            .debug_selector({
+                let label = label.clone();
+                move || format!("workspace-menu-{label}")
+            })
             .role(Role::MenuItem)
-            .aria_label(label.trim_end_matches("..."))
+            .aria_label(label.trim_end_matches("...").to_owned())
             .when(selected, |row| row.aria_active_descendant())
             .mt(px(6.))
             .mx(px(2.))
@@ -361,14 +382,17 @@ impl HerdrWindow {
             })
             .text_color(red)
             .on_hover(Self::workspace_hover(action, cx))
-            .child(leading_icon(action, label, red))
+            .child(leading_icon(action, label.clone(), red))
             .child(
                 div()
                     .flex_1()
                     .min_w_0()
                     .truncate()
-                    .debug_selector(move || format!("workspace-menu-label-{label}"))
-                    .child(label),
+                    .debug_selector({
+                        let label = label.clone();
+                        move || format!("workspace-menu-label-{label}")
+                    })
+                    .child(label.clone()),
             )
             .on_click(cx.listener(move |this, _, window, cx| {
                 cx.stop_propagation();

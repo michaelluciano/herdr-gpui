@@ -16,7 +16,7 @@
 
 mod chats;
 mod discovery;
-mod existing;
+pub(crate) mod existing;
 mod glide;
 mod harnesses;
 mod link;

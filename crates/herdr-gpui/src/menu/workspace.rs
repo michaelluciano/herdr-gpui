@@ -34,6 +34,9 @@ pub(crate) struct WorkspaceTarget {
     pub(super) base: Option<String>,
     /// How worktree requests name the repository to the daemon.
     pub(super) source: Source,
+    /// The agent sessions in this workspace's panes, which "Copy session id"
+    /// rows copy, one row each.
+    pub(super) sessions: Vec<crate::session_copy::Session>,
 }
 
 /// How a worktree request tells the daemon which repository it is for.
@@ -77,6 +80,7 @@ impl WorkspaceTarget {
             branch: workspace.branch.clone(),
             base: None,
             source: Source::of(workspace),
+            sessions: Vec::new(),
         }
     }
 
@@ -491,7 +495,13 @@ impl HerdrWindow {
             self.selection_epoch,
             self.endpoints[self.selected_endpoint].generation,
         );
-        self.menu.target = Some(WorkspaceTarget::new(snapshot, workspace));
+        let mut target = WorkspaceTarget::new(snapshot, workspace);
+        target.sessions = crate::session_copy::of_workspace(
+            snapshot,
+            self.chats.existing.bindings(),
+            &workspace.workspace_id,
+        );
+        self.menu.target = Some(target);
         self.menu.anchor = anchor;
         self.menu.page = Some(Page::Workspace);
         self.refresh_workspace_pr();
@@ -591,75 +601,93 @@ impl HerdrWindow {
     /// The actions this workspace offers, in the order the popover shows them
     /// and arrow keys walk them: the tile grid row by row (work, then moving
     /// or leaving), the plain rows, and the destructive action last.
-    pub(super) fn workspace_items(&self) -> Vec<(WorkspaceMenuAction, &'static str)> {
+    pub(super) fn workspace_items(&self) -> Vec<(WorkspaceMenuAction, SharedString)> {
         use WorkspaceMenuAction::Dialog;
         let Some(target) = &self.menu.target else {
             return vec![];
         };
         let mut items = Vec::new();
         if target.can_create() || self.linked_new_worktree_target().is_some() {
-            items.push((Dialog(WorkspaceAction::NewWorktree), "New worktree"));
+            items.push((Dialog(WorkspaceAction::NewWorktree), "New worktree".into()));
         }
         if let Some(label) = self.fan_out_item() {
-            items.push((WorkspaceMenuAction::FanOut, label));
+            items.push((WorkspaceMenuAction::FanOut, label.into()));
         }
-        items.push((Dialog(WorkspaceAction::Rename), "Rename"));
+        items.push((Dialog(WorkspaceAction::Rename), "Rename".into()));
         if self.teleport_mark().is_some() {
-            items.push((WorkspaceMenuAction::GoToTeleported, "Go to teleported copy"));
+            items.push((
+                WorkspaceMenuAction::GoToTeleported,
+                "Go to teleported copy".into(),
+            ));
             items.push((
                 WorkspaceMenuAction::ClearTeleported,
-                "Clear teleported mark",
+                "Clear teleported mark".into(),
             ));
         } else if self.can_teleport() {
-            items.push((WorkspaceMenuAction::Teleport, "Teleport..."));
+            items.push((WorkspaceMenuAction::Teleport, "Teleport...".into()));
             if self.teleport_origin().is_some() {
-                items.push((WorkspaceMenuAction::TeleportBack, "Teleport back"));
+                items.push((WorkspaceMenuAction::TeleportBack, "Teleport back".into()));
             }
         }
-        items.push((Dialog(WorkspaceAction::Close), target.close_label()));
+        items.push((Dialog(WorkspaceAction::Close), target.close_label().into()));
         if self.checkpoint_checkout().is_some() {
-            items.push((WorkspaceMenuAction::Checkpoints, "Checkpoints..."));
+            items.push((WorkspaceMenuAction::Checkpoints, "Checkpoints...".into()));
         }
         if self.note_checkout().is_some() {
-            items.push((Dialog(WorkspaceAction::Note), "Note..."));
+            items.push((Dialog(WorkspaceAction::Note), "Note...".into()));
         }
         if target.worktree.is_some() && self.orchestrator_host() {
             items.push((
                 WorkspaceMenuAction::Orchestrator,
-                "Issues and pull requests",
+                "Issues and pull requests".into(),
             ));
         }
         if target.can_create() {
-            items.push((Dialog(WorkspaceAction::OpenWorktree), "Open worktree..."));
+            items.push((
+                Dialog(WorkspaceAction::OpenWorktree),
+                "Open worktree...".into(),
+            ));
         }
         #[cfg(feature = "cloud")]
         if target.worktree.is_some() && !self.sandbox_image_providers().is_empty() {
-            items.push((WorkspaceMenuAction::SandboxImages, "Build sandbox images"));
+            items.push((
+                WorkspaceMenuAction::SandboxImages,
+                "Build sandbox images".into(),
+            ));
         }
         // Whether the checkout defines scripts is only known once its file is
         // read, so every Git checkout offers them and an absent one says so.
         if target.worktree.is_some() {
             use crate::worktree_scripts::ScriptKind;
-            items.push((WorkspaceMenuAction::Script(ScriptKind::Run), "Run script"));
+            items.push((
+                WorkspaceMenuAction::Script(ScriptKind::Run),
+                "Run script".into(),
+            ));
             if target.can_delete() {
                 items.push((
                     WorkspaceMenuAction::Script(ScriptKind::Setup),
-                    "Run setup script",
+                    "Run setup script".into(),
                 ));
             }
         }
         // Only a workspace that heads a group of checkouts can fold anything.
         if let Some(key) = target.group_key() {
             items.push(if self.collapsed_repos_for_selection().contains(key) {
-                (WorkspaceMenuAction::Expand, "Expand group")
+                (WorkspaceMenuAction::Expand, "Expand group".into())
             } else {
-                (WorkspaceMenuAction::Collapse, "Collapse group")
+                (WorkspaceMenuAction::Collapse, "Collapse group".into())
             });
+        }
+        for (index, session) in target.sessions.iter().enumerate() {
+            items.push((
+                WorkspaceMenuAction::CopySession(index),
+                session.label().into(),
+            ));
         }
         if target.can_delete() {
             items.push((
                 Dialog(WorkspaceAction::DeleteWorktree),
-                "Delete worktree checkout",
+                "Delete worktree checkout".into(),
             ));
         }
         items
@@ -845,6 +873,18 @@ impl HerdrWindow {
     ) {
         match action {
             WorkspaceMenuAction::Dialog(action) => self.open_workspace_dialog(action, window, cx),
+            WorkspaceMenuAction::CopySession(index) => {
+                let id = self
+                    .menu
+                    .target
+                    .as_ref()
+                    .and_then(|target| target.sessions.get(index))
+                    .map(|session| session.id.clone());
+                if let Some(id) = id {
+                    self.copy_session_id(&id, cx);
+                    self.dismiss_menu(window, cx);
+                }
+            }
             WorkspaceMenuAction::Collapse | WorkspaceMenuAction::Expand => {
                 self.toggle_selected_group(cx)
             }

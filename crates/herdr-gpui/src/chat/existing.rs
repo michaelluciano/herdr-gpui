@@ -84,6 +84,12 @@ pub(crate) struct Existing {
 }
 
 impl Existing {
+    /// Sets the bindings a probe would have returned, for menus under test.
+    #[cfg(test)]
+    pub(crate) fn seed_bindings(&mut self, bindings: Vec<Binding>) {
+        self.bindings = bindings;
+    }
+
     pub(crate) fn bindings(&self) -> &[Binding] {
         &self.bindings
     }
