@@ -243,6 +243,8 @@ pub(crate) struct HerdrWindow {
     pub(crate) links: links::DaemonLinks,
     pub(crate) listening_ports: crate::listening_ports::ListeningPorts,
     pub(crate) live: LiveState,
+    /// What the LLM launcher rows last saw running, and when.
+    pub(crate) llm_launch: crate::llm_launch::Launchers,
     pub(crate) local_error: Option<String>,
     /// Draws the moving status marks the sidebar and the tab strip reserve
     /// room for; see `mark_layer`.
@@ -679,6 +681,8 @@ impl HerdrWindow {
         self.poll_devices_overview(cx);
         self.poll_graphs(cx);
         self.poll_handoffs(cx);
+        self.poll_llm_launchers(cx);
+        self.poll_llm_terminal(cx);
         self.poll_overview(cx);
         self.poll_security(cx);
         self.poll_automations(cx);

@@ -444,7 +444,7 @@ impl HerdrWindow {
     /// agent's tab, or a new chat's tab is starting. The connection keeps
     /// one script reply slot, so one starts at a time.
     pub(crate) fn script_slot_busy(&self) -> bool {
-        self.overview_reopening() || self.script_job_busy()
+        self.overview_reopening() || self.script_job_busy() || self.llm_launch.terminal.is_some()
     }
 
     /// Whether a worktree or cloud device script, or a new chat, holds the

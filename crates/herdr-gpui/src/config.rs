@@ -29,6 +29,7 @@ mod fonts;
 mod github;
 mod keybindings;
 mod layout;
+pub(crate) mod llm_launchers;
 mod notifications;
 mod omarchy;
 mod opensandbox;
@@ -210,6 +211,9 @@ pub struct Config {
     pub(crate) keybinding_overrides: BTreeMap<String, Binding>,
     pub keybindings: Keymap,
     pub layout: Layout,
+    /// Sidebar rows that start a local model or a terminal command, from
+    /// `[[llm_launchers]]`.
+    pub llm_launchers: Vec<llm_launchers::Launcher>,
     /// Configured families, sorted, that font resolution found no installed
     /// family for; `diagnostic` reports them.
     pub(crate) missing_fonts: Vec<String>,
@@ -410,6 +414,7 @@ impl Default for Config {
             keybinding_overrides: BTreeMap::new(),
             keybindings: Keymap::default(),
             layout: Layout::default(),
+            llm_launchers: Vec::new(),
             missing_fonts: Vec::new(),
             missing_weight: None,
             notification_overrides: NotificationSettings::default(),
@@ -491,6 +496,7 @@ struct Settings {
     keep_selection_after_copy: Option<bool>,
     keybindings: BTreeMap<String, Binding>,
     layout: Layout,
+    llm_launchers: Vec<llm_launchers::Raw>,
     notifications: NotificationSettings,
     open_files_in: FileTarget,
     open_links_in: LinkTarget,
@@ -760,6 +766,7 @@ impl Config {
         }
         // A newer build may keep more accounts or owners than this one.
         unknown_keys.extend(settings.github.limit_accounts());
+        unknown_keys.extend(llm_launchers::limit(&mut settings.llm_launchers));
         unknown_keys.extend(settings.cloud.retain_known());
         unknown_keys.sort();
         unknown_keys.dedup();
@@ -865,6 +872,7 @@ impl Config {
         config.edge_rail = settings.edge_rail.unwrap_or(legacy_rail);
         config.zen = settings.zen.try_into()?;
         config.worktrees = settings.worktrees.resolve()?;
+        config.llm_launchers = llm_launchers::resolve(settings.llm_launchers)?;
         settings.backdrop.validate()?;
         config.backdrop = settings.backdrop;
         config.accent = settings.accent;

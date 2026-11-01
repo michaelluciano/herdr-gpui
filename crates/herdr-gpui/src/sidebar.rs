@@ -12,6 +12,7 @@ mod host_row;
 mod hover;
 mod layout;
 mod layouts;
+mod llm_rows;
 mod metrics;
 mod note_line;
 mod order;
@@ -56,6 +57,7 @@ pub(crate) use {
 };
 
 pub(crate) use layout::SidebarMetrics;
+pub(crate) use llm_rows::blocked_message;
 pub(crate) use order::step as sidebar_step;
 
 #[cfg(any(test, feature = "integration-test"))]

@@ -215,6 +215,7 @@ impl HerdrWindow {
             links: Default::default(),
             listening_ports: Default::default(),
             live: LiveState::default(),
+            llm_launch: Default::default(),
             local_error: error,
             mark_layer,
             marked: String::new(),
