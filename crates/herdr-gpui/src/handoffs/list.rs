@@ -1,19 +1,32 @@
-//! Lists the open handoff files of a handoffs root.
+//! Lists the handoff files of a handoffs root, whatever their status.
 
 use std::{
+    collections::HashMap,
     fs::File,
     io::Read as _,
     path::{Path, PathBuf},
 };
 
-/// The most handoffs kept.
-pub(crate) const MAX_HANDOFFS: usize = 100;
+/// The most handoffs kept, newest first. Sized above the directory's current
+/// size so the history is complete; each costs one bounded read per poll.
+pub(crate) const MAX_HANDOFFS: usize = 200;
 /// The most bytes read from the head of one file.
 pub(crate) const MAX_READ: usize = 4096;
 /// The most characters kept of one front matter value.
 pub(crate) const MAX_VALUE: usize = 120;
 
-/// One open session handoff.
+/// The front matter keys read. Every other key is ignored.
+const KEYS: [&str; 7] = [
+    "id",
+    "created",
+    "status",
+    "session_id",
+    "parent",
+    "prev",
+    "claimed_by",
+];
+
+/// One session handoff. Values are untrusted text, cut to [`MAX_VALUE`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Handoff {
     pub(crate) path: PathBuf,
@@ -23,10 +36,18 @@ pub(crate) struct Handoff {
     pub(crate) id: String,
     /// The front matter `created`, empty when absent.
     pub(crate) created: String,
+    /// The front matter `status`, verbatim; empty when present but blank.
+    pub(crate) status: String,
+    pub(crate) session_id: String,
+    pub(crate) parent: String,
+    /// The `id` of the handoff this one continues, empty when none.
+    pub(crate) prev: String,
+    /// Who claimed the handoff, empty when unclaimed.
+    pub(crate) claimed_by: String,
 }
 
-/// The open `<root>/*/sessions/*.md` handoffs, newest first.
-pub(crate) fn list_open(root: &Path) -> Vec<Handoff> {
+/// Every `<root>/*/sessions/*.md` handoff with a `status` key, newest first.
+pub(crate) fn list_all(root: &Path) -> Vec<Handoff> {
     let mut found: Vec<Handoff> = entries(root, EntryKind::Dir)
         .into_iter()
         .flat_map(|project| {
@@ -76,14 +97,16 @@ fn entries(dir: &Path, kind: EntryKind) -> Vec<PathBuf> {
         .collect()
 }
 
-/// The handoff a file describes, `None` unless its front matter says open.
+/// The handoff a file describes, `None` unless its front matter is closed
+/// and has a `status` key.
 fn read_handoff(path: PathBuf, project: &str) -> Option<Handoff> {
     let head = read_head(&path)?;
     let mut lines = head.lines();
     if lines.next()?.trim() != "---" {
         return None;
     }
-    let (mut id, mut created, mut status) = (None, None, None);
+    // The first occurrence of a key wins.
+    let mut values: HashMap<&'static str, String> = HashMap::new();
     let mut closed = false;
     for line in lines {
         if line.trim() == "---" {
@@ -93,25 +116,29 @@ fn read_handoff(path: PathBuf, project: &str) -> Option<Handoff> {
         let Some((key, value)) = line.split_once(':') else {
             continue;
         };
-        let slot = match key.trim() {
-            "id" => &mut id,
-            "created" => &mut created,
-            "status" => &mut status,
-            _ => continue,
+        let Some(key) = KEYS.iter().copied().find(|known| *known == key.trim()) else {
+            continue;
         };
-        slot.get_or_insert_with(|| value.trim().to_owned());
+        values.entry(key).or_insert_with(|| value.trim().to_owned());
     }
-    if !closed || status.as_deref() != Some("open") {
+    if !closed {
         return None;
     }
-    let id = id
-        .map(|id| cut(&id))
-        .filter(|id| !id.is_empty())
-        .or_else(|| path.file_stem().map(|s| cut(&s.to_string_lossy())))?;
+    let status = cut(&values.remove("status")?);
+    let mut value = |key: &str| cut(&values.remove(key).unwrap_or_default());
+    let id = match value("id") {
+        id if !id.is_empty() => id,
+        _ => cut(&path.file_stem()?.to_string_lossy()),
+    };
     Some(Handoff {
         project: project.to_owned(),
         id,
-        created: cut(&created.unwrap_or_default()),
+        created: value("created"),
+        status,
+        session_id: value("session_id"),
+        parent: value("parent"),
+        prev: value("prev"),
+        claimed_by: value("claimed_by"),
         path,
     })
 }

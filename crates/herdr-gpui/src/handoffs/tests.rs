@@ -1,9 +1,11 @@
-//! Tests of the handoff list, its refresh, and its click target.
+//! Tests of the handoff list, its classification, its refresh, and its click target.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use super::*;
 use std::path::{Path, PathBuf};
 
+mod classify;
+mod line;
 mod list;
 mod poll;
 mod target;
@@ -19,6 +21,22 @@ pub(super) fn open_header(id: &str, created: &str) -> String {
     format!(
         "---\nid: {id}\nparent: P-x\ncreated: {created}\nstatus: open\nreason: end\n---\nbody\n"
     )
+}
+
+/// A handoff as the loader reads it: the given id, project, created and
+/// status, and no other front matter.
+pub(super) fn fixture(id: &str, project: &str, created: &str, status: &str) -> Handoff {
+    Handoff {
+        path: PathBuf::from(format!("/handoffs/{project}/sessions/{id}.md")),
+        project: project.into(),
+        id: id.into(),
+        created: created.into(),
+        status: status.into(),
+        session_id: String::new(),
+        parent: String::new(),
+        prev: String::new(),
+        claimed_by: String::new(),
+    }
 }
 
 /// A unique temp directory removed on drop.

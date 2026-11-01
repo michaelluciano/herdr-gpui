@@ -1,26 +1,31 @@
-//! The Handoffs section below the workspaces and agents lists.
+//! The Handoffs section below the workspaces and agents lists: the active
+//! handoffs, and behind a header control the picked-up and superseded ones.
 
-use super::{label_text, layout::SidebarLook, line_height, render::header};
+use super::{
+    accessibility::expandable, label_text, layout::SidebarLook, line_height, render::header_frame,
+};
 use crate::{
     HerdrWindow,
-    handoffs::{Handoff, target_for},
+    handoffs::{Handoff, Shelf, detail, target_for},
     window::chrome_focus::Region,
 };
 use gpui::{prelude::*, *};
 
 /// The share of the sidebar's height the section may take.
 const MAX_SHARE: f32 = 0.30;
-/// How many characters of `created` a row shows: the date.
-const DATE_CHARS: usize = 10;
+/// The chevron before the title while the body shows.
+const CHEVRON_OPEN: &str = "\u{25be}";
+/// The chevron before the title while the body is folded.
+const CHEVRON_FOLDED: &str = "\u{25b8}";
 
-/// A row's second line: the project, then the day it was written.
-fn detail(handoff: &Handoff) -> String {
-    let date: String = handoff.created.chars().take(DATE_CHARS).collect();
-    if date.is_empty() {
-        handoff.project.clone()
-    } else {
-        format!("{} \u{b7} {date}", handoff.project)
-    }
+fn flip_folded(this: &mut HerdrWindow, cx: &mut Context<HerdrWindow>) {
+    this.handoffs.collapsed = !this.handoffs.collapsed;
+    cx.notify();
+}
+
+fn flip_history(this: &mut HerdrWindow, cx: &mut Context<HerdrWindow>) {
+    this.handoffs.history_open = !this.handoffs.history_open;
+    cx.notify();
 }
 
 impl HerdrWindow {
@@ -32,44 +37,59 @@ impl HerdrWindow {
         look: SidebarLook,
         cx: &mut Context<Self>,
     ) -> Option<Div> {
-        let list = &self.handoffs.list;
-        if devices || list.is_empty() {
+        let board = &self.handoffs.board;
+        if devices || (board.active.is_empty() && board.history.is_empty()) {
             return None;
         }
         let font = &self.config.sidebar;
         let theme = &self.theme;
-        let rows = list.iter().enumerate().map(|(index, handoff)| {
-            let target = target_for(handoff);
-            self.chrome_stop(
-                Region::Sidebar,
-                div()
-                    .id(("handoff-row", index))
-                    .debug_selector(|| format!("handoff-row-{index}"))
-                    .role(Role::Button)
-                    .aria_label(format!("Open handoff {}", handoff.id))
-                    .flex_none()
-                    .min_w_0()
-                    .px(px(look.content_x()))
-                    .py(px(look.row_padding()))
-                    .cursor_pointer()
-                    .hover(|row| row.bg(rgba(crate::panel_resize::RESIZE_HOVER)))
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        this.open_code_view(&target, window, cx);
-                    }))
-                    .child(
-                        div()
-                            .truncate()
-                            .text_color(rgb(theme.subtext()))
-                            .child(label_text(&handoff.id)),
-                    )
-                    .child(
-                        div()
-                            .truncate()
-                            .text_color(rgb(theme.muted))
-                            .child(label_text(&detail(handoff))),
-                    ),
-            )
+        let body = (!self.handoffs.collapsed).then(|| {
+            let active: Vec<_> = board
+                .active
+                .iter()
+                .enumerate()
+                .map(|(index, handoff)| self.row(("handoff-row", index), handoff, None, look, cx))
+                .collect();
+            let shelved: Vec<_> = if self.handoffs.history_open {
+                board
+                    .history
+                    .iter()
+                    .enumerate()
+                    .map(|(index, shelved)| {
+                        self.row(
+                            ("handoff-history-row", index),
+                            &shelved.handoff,
+                            Some(shelved.shelf),
+                            look,
+                            cx,
+                        )
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            };
+            div()
+                .id("handoffs-scroll")
+                .debug_selector(|| "handoffs-scroll".into())
+                .flex_initial()
+                .min_h_0()
+                .flex()
+                .flex_col()
+                .overflow_y_scroll()
+                .text_size(px(font.size))
+                .line_height(px(line_height(font)))
+                .children(active)
+                .children(shelved)
         });
+        let count = div()
+            .debug_selector(|| "handoffs-count".into())
+            .child(label_text(&board.active.len().to_string()));
+        let right = div()
+            .flex()
+            .items_center()
+            .gap_2()
+            .child(self.history_toggle(cx))
+            .child(count);
         Some(
             div()
                 .debug_selector(|| "handoffs-section".into())
@@ -82,23 +102,126 @@ impl HerdrWindow {
                 .border_t_1()
                 .border_color(rgb(theme.tokens().line))
                 .child(
-                    header("handoffs", font, theme, look)
+                    header_frame("handoffs", font, theme, look)
                         .justify_between()
-                        .child(label_text(&list.len().to_string())),
+                        .child(self.title_toggle(look, cx))
+                        .child(right),
                 )
-                .child(
-                    div()
-                        .id("handoffs-scroll")
-                        .debug_selector(|| "handoffs-scroll".into())
-                        .flex_initial()
-                        .min_h_0()
-                        .flex()
-                        .flex_col()
-                        .overflow_y_scroll()
-                        .text_size(px(font.size))
-                        .line_height(px(line_height(font)))
-                        .children(rows),
-                ),
+                .children(body),
         )
+    }
+
+    /// The title and its chevron, which fold the body. Its own click target,
+    /// apart from the history control beside it.
+    fn title_toggle(&self, look: SidebarLook, cx: &mut Context<Self>) -> Stateful<Div> {
+        let folded = self.handoffs.collapsed;
+        let title = div()
+            .id("handoffs-toggle")
+            .debug_selector(|| "handoffs-toggle".into())
+            .role(Role::Button)
+            .aria_label(if folded {
+                "Expand handoffs"
+            } else {
+                "Collapse handoffs"
+            })
+            .flex()
+            .items_center()
+            .gap_1()
+            .cursor_pointer()
+            .hover(|style| style.text_color(rgb(self.theme.foreground)))
+            .on_click(cx.listener(|this, _, _, cx| {
+                cx.stop_propagation();
+                flip_folded(this, cx);
+            }))
+            .child(
+                div()
+                    .debug_selector(|| "handoffs-chevron".into())
+                    .child(label_text(if folded {
+                        CHEVRON_FOLDED
+                    } else {
+                        CHEVRON_OPEN
+                    })),
+            )
+            .child(
+                div()
+                    .debug_selector(|| "header-label-handoffs".into())
+                    .child(label_text(&look.header_label("handoffs"))),
+            );
+        let title = self.chrome_stop(Region::Sidebar, title);
+        expandable(title, !folded, cx.entity().downgrade(), |this, _, cx| {
+            flip_folded(this, cx)
+        })
+    }
+
+    /// The control that shows or hides the picked-up and superseded rows.
+    fn history_toggle(&self, cx: &mut Context<Self>) -> Stateful<Div> {
+        let open = self.handoffs.history_open;
+        let count = self.handoffs.board.history.len();
+        let control = div()
+            .id("handoffs-history-toggle")
+            .debug_selector(|| "handoffs-history-toggle".into())
+            .role(Role::Button)
+            .aria_label(format!("Picked up and superseded handoffs: {count}"))
+            .cursor_pointer()
+            .text_color(rgb(self.theme.muted))
+            .hover(|style| style.text_color(rgb(self.theme.foreground)))
+            .on_click(cx.listener(|this, _, _, cx| {
+                cx.stop_propagation();
+                flip_history(this, cx);
+            }))
+            .child(label_text(&format!("picked up {count}")));
+        let control = self.chrome_stop(Region::Sidebar, control);
+        expandable(control, open, cx.entity().downgrade(), |this, _, cx| {
+            flip_history(this, cx);
+        })
+    }
+
+    /// One handoff row. A history row is dimmer and names why it is there.
+    fn row(
+        &self,
+        slot: (&'static str, usize),
+        handoff: &Handoff,
+        shelf: Option<Shelf>,
+        look: SidebarLook,
+        cx: &mut Context<Self>,
+    ) -> Stateful<Div> {
+        let (prefix, index) = slot;
+        let theme = &self.theme;
+        let target = target_for(handoff);
+        let id_color = match shelf {
+            None => theme.subtext(),
+            Some(_) => theme.muted,
+        };
+        let aria = match shelf {
+            None => format!("Open handoff {}", handoff.id),
+            Some(shelf) => format!("Open {} handoff {}", shelf.label(), handoff.id),
+        };
+        let row = div()
+            .id(slot)
+            .debug_selector(|| format!("{prefix}-{index}"))
+            .role(Role::Button)
+            .aria_label(aria)
+            .flex_none()
+            .min_w_0()
+            .px(px(look.content_x()))
+            .py(px(look.row_padding()))
+            .cursor_pointer()
+            .hover(|row| row.bg(rgba(crate::panel_resize::RESIZE_HOVER)))
+            .on_click(cx.listener(move |this, _, window, cx| {
+                this.open_code_view(&target, window, cx);
+            }))
+            .child(
+                div()
+                    .truncate()
+                    .text_color(rgb(id_color))
+                    .child(label_text(&handoff.id)),
+            )
+            .child(
+                div()
+                    .truncate()
+                    .text_color(rgb(theme.muted))
+                    .child(label_text(&detail(handoff, shelf))),
+            );
+        self.chrome_stop(Region::Sidebar, row)
     }
 }

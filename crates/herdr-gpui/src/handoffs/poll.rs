@@ -1,6 +1,6 @@
-//! The five second refresh of the handoff list.
+//! The five second refresh of the handoff board.
 
-use super::list::{Handoff, list_open};
+use super::{classify, classify::Board, list::list_all};
 use crate::HerdrWindow;
 use gpui::Context;
 use std::{
@@ -11,11 +11,15 @@ use std::{
 /// How often the handoff directory is read.
 pub(crate) const HANDOFF_REFRESH: Duration = Duration::from_secs(5);
 
-/// The window's handoff list and when it was last read.
+/// The window's handoff board and when it was last read.
 #[derive(Debug, Default)]
 pub(crate) struct Handoffs {
-    pub(crate) list: Vec<Handoff>,
+    pub(crate) board: Board,
     pub(crate) last_poll: Option<Instant>,
+    /// The section body is folded; its header stays.
+    pub(crate) collapsed: bool,
+    /// The history rows show below the active rows.
+    pub(crate) history_open: bool,
     /// A read is running, so ticks do not stack another.
     loading: bool,
 }
@@ -54,13 +58,13 @@ impl HerdrWindow {
         self.handoffs.loading = true;
         let reading = cx
             .background_executor()
-            .spawn(async move { list_open(&root) });
+            .spawn(async move { classify(list_all(&root)) });
         cx.spawn(async move |this, cx| {
-            let list = reading.await;
+            let board = reading.await;
             this.update(cx, |this, cx| {
                 this.handoffs.loading = false;
-                if this.handoffs.list != list {
-                    this.handoffs.list = list;
+                if this.handoffs.board != board {
+                    this.handoffs.board = board;
                     cx.notify();
                 }
             })
