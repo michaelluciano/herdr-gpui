@@ -6,10 +6,11 @@ use super::{
 };
 use crate::{
     HerdrWindow,
-    handoffs::{Handoff, Shelf, detail, target_for},
-    window::chrome_focus::Region,
+    handoffs::{Handoff, Shelf, detail},
+    window::{Flash, chrome_focus::Region},
 };
-use gpui::{prelude::*, *};
+use gpui::{ClipboardItem, prelude::*, *};
+use std::path::{Path, PathBuf};
 
 /// The share of the sidebar's height the section may take.
 const MAX_SHARE: f32 = 0.30;
@@ -176,6 +177,14 @@ impl HerdrWindow {
         })
     }
 
+    /// Puts the handoff file's absolute path on the clipboard and flashes it,
+    /// so the operator can paste it into a session.
+    fn copy_handoff_path(&mut self, path: &Path, cx: &mut Context<Self>) {
+        let text = path.to_string_lossy().into_owned();
+        cx.write_to_clipboard(ClipboardItem::new_string(text.clone()));
+        self.show_flash(Flash::success(format!("Copied {text}")), cx);
+    }
+
     /// One handoff row. A history row is dimmer and names why it is there.
     fn row(
         &self,
@@ -187,14 +196,14 @@ impl HerdrWindow {
     ) -> Stateful<Div> {
         let (prefix, index) = slot;
         let theme = &self.theme;
-        let target = target_for(handoff);
+        let path: PathBuf = handoff.path.clone();
         let id_color = match shelf {
             None => theme.subtext(),
             Some(_) => theme.muted,
         };
         let aria = match shelf {
-            None => format!("Open handoff {}", handoff.id),
-            Some(shelf) => format!("Open {} handoff {}", shelf.label(), handoff.id),
+            None => format!("Copy path of handoff {}", handoff.id),
+            Some(shelf) => format!("Copy path of {} handoff {}", shelf.label(), handoff.id),
         };
         let row = div()
             .id(slot)
@@ -207,8 +216,8 @@ impl HerdrWindow {
             .py(px(look.row_padding()))
             .cursor_pointer()
             .hover(|row| row.bg(rgba(crate::panel_resize::RESIZE_HOVER)))
-            .on_click(cx.listener(move |this, _, window, cx| {
-                this.open_code_view(&target, window, cx);
+            .on_click(cx.listener(move |this, _, _, cx| {
+                this.copy_handoff_path(&path, cx);
             }))
             .child(
                 div()

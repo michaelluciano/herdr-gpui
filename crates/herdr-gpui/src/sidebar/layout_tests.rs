@@ -41,6 +41,8 @@ mod devices_layout;
 #[cfg(test)]
 mod gpu_line;
 #[cfg(test)]
+mod handoff_copy;
+#[cfg(test)]
 mod handoffs;
 #[cfg(test)]
 mod handoffs_history;

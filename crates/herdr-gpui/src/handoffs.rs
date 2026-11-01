@@ -7,7 +7,6 @@ mod classify;
 mod line;
 mod list;
 mod poll;
-mod target;
 
 #[cfg(test)]
 mod tests;
@@ -20,4 +19,3 @@ pub(crate) use list::list_all;
 pub(crate) use poll::Handoffs;
 #[cfg(test)]
 pub(crate) use poll::root_under;
-pub(crate) use target::target_for;

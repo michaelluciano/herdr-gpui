@@ -1,13 +1,8 @@
 #![allow(clippy::expect_used)]
 
 use super::*;
-use crate::{
-    browser::{Location, Store},
-    config::LayoutMode,
-    handoffs::Handoff,
-    state::ConnectionStatus,
-};
-use gpui::{Entity, Modifiers, VisualTestContext, px, size};
+use crate::{config::LayoutMode, handoffs::Handoff, state::ConnectionStatus};
+use gpui::{Entity, VisualTestContext, px, size};
 
 /// An open handoff with the given id, project and created.
 pub(super) fn handoff(id: &str, project: &str, created: &str) -> Handoff {
@@ -181,26 +176,4 @@ fn a_short_list_is_shorter_than_the_cap(cx: &mut gpui::TestAppContext) {
         .debug_bounds("handoffs-section")
         .expect("no handoffs section");
     assert!(section.size.height <= sidebar.size.height * 0.30 + px(1.));
-}
-
-#[gpui::test]
-fn clicking_a_row_opens_that_file_in_a_code_tab(cx: &mut gpui::TestAppContext) {
-    let list = three();
-    let wanted = list[1].path.to_str().unwrap().to_owned();
-    let (_view, cx) = window(cx, None, list);
-    let row = cx.debug_bounds("handoff-row-1").expect("no second row");
-    cx.simulate_click(row.center(), Modifiers::default());
-    cx.run_until_parked();
-    let opened: Vec<String> = cx.update(|_, cx| {
-        cx.try_global::<Store>().map_or_else(Vec::new, |store| {
-            store
-                .tabs()
-                .filter_map(|tab| match &tab.location {
-                    Some(Location::Code { file }) => Some(file.path.clone()),
-                    _ => None,
-                })
-                .collect()
-        })
-    });
-    assert_eq!(opened, [wanted]);
 }

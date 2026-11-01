@@ -4,10 +4,7 @@
 
 use super::handoffs::{handoff, texts, window};
 use super::*;
-use crate::{
-    browser::{Location, Store},
-    handoffs::Handoff,
-};
+use crate::handoffs::Handoff;
 use gpui::{Modifiers, VisualTestContext};
 
 /// Two active handoffs, then one picked up and one superseded behind them.
@@ -157,25 +154,4 @@ fn nothing_active_or_shelved_hides_the_section(cx: &mut gpui::TestAppContext) {
     assert!(cx.debug_bounds("handoffs-section").is_none());
     assert!(cx.debug_bounds("handoffs-toggle").is_none());
     assert!(cx.debug_bounds("spaces-section").is_some());
-}
-
-#[gpui::test]
-fn clicking_a_history_row_opens_its_file_in_a_code_tab(cx: &mut gpui::TestAppContext) {
-    let list = mixed();
-    let wanted = list[3].path.to_str().unwrap().to_owned();
-    let (_view, cx) = window(cx, None, list);
-    click(cx, "handoffs-history-toggle");
-    click(cx, "handoff-history-row-1");
-    let opened: Vec<String> = cx.update(|_, cx| {
-        cx.try_global::<Store>().map_or_else(Vec::new, |store| {
-            store
-                .tabs()
-                .filter_map(|tab| match &tab.location {
-                    Some(Location::Code { file }) => Some(file.path.clone()),
-                    _ => None,
-                })
-                .collect()
-        })
-    });
-    assert_eq!(opened, [wanted]);
 }
