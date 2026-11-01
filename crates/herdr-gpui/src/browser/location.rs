@@ -74,6 +74,10 @@ pub(crate) enum Location {
     },
     /// Every device this window connects to, drawn by the app, never a page.
     Devices,
+    /// A checkout's commit graph, read-only, drawn by the app, never a page.
+    Graph {
+        checkout: ReviewCheckout,
+    },
 }
 
 /// The checkout an orchestrator view lists the repository of, on the view's
@@ -207,9 +211,11 @@ impl Location {
             Self::Web { url } => url.as_str().to_owned(),
             Self::Local { file } => file.page_url(),
             // Never loaded: a review is drawn by the app.
-            Self::Review { .. } | Self::Code { .. } | Self::Orchestrator { .. } | Self::Devices => {
-                "about:blank".to_owned()
-            }
+            Self::Review { .. }
+            | Self::Code { .. }
+            | Self::Orchestrator { .. }
+            | Self::Devices
+            | Self::Graph { .. } => "about:blank".to_owned(),
         }
     }
 
@@ -217,7 +223,11 @@ impl Location {
     pub(crate) fn is_page(&self) -> bool {
         !matches!(
             self,
-            Self::Review { .. } | Self::Code { .. } | Self::Orchestrator { .. } | Self::Devices
+            Self::Review { .. }
+                | Self::Code { .. }
+                | Self::Orchestrator { .. }
+                | Self::Devices
+                | Self::Graph { .. }
         )
     }
 
@@ -230,6 +240,7 @@ impl Location {
             Self::Code { file } => file.path.clone(),
             Self::Orchestrator { repo } => format!("Orchestrator of {}", repo.name()),
             Self::Devices => "Devices overview".to_owned(),
+            Self::Graph { checkout } => format!("Git graph of {}", checkout.branch),
         }
     }
 
@@ -242,6 +253,7 @@ impl Location {
             Self::Code { file } => file.name().to_owned(),
             Self::Orchestrator { repo } => format!("Orchestrator \u{00b7} {}", repo.name()),
             Self::Devices => "Devices".to_owned(),
+            Self::Graph { checkout } => format!("Graph \u{00b7} {}", checkout.branch),
         }
     }
 

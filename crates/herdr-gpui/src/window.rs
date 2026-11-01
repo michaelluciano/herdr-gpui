@@ -207,8 +207,18 @@ pub(crate) struct HerdrWindow {
     /// Where the titlebar's Git button last painted. The window owns it so a
     /// shortcut and a click open the Git menu at the same place.
     pub(crate) git_anchor: std::rc::Rc<std::cell::Cell<Point<Pixels>>>,
+    /// Each graph tab's state, by its tab.
+    pub(crate) graphs:
+        std::collections::HashMap<crate::browser::TabId, crate::graph_view::state::GraphState>,
+    /// Each graph tab's keyboard focus, by its tab.
+    pub(crate) graph_focus: std::collections::HashMap<crate::browser::TabId, FocusHandle>,
+    /// Each graph tab's list scroll position, by its tab.
+    pub(crate) graph_scroll:
+        std::collections::HashMap<crate::browser::TabId, UniformListScrollHandle>,
     /// Unknown keys in the GUI config, ignored but reported; follows `config`.
     pub(crate) gui_config_diagnostic: crate::config_diagnostic::ConfigDiagnostic,
+    /// The open session handoffs the sidebar lists, and when they were read.
+    pub(crate) handoffs: crate::handoffs::Handoffs,
     pub(crate) held_keys: crate::terminal::HeldKeys,
     /// The sidebar row the pointer is resting on, waiting to open its menu.
     pub(crate) hover: Option<sidebar::HoverRest>,
@@ -667,6 +677,8 @@ impl HerdrWindow {
             cx.notify();
         }
         self.poll_devices_overview(cx);
+        self.poll_graphs(cx);
+        self.poll_handoffs(cx);
         self.poll_overview(cx);
         self.poll_security(cx);
         self.poll_automations(cx);

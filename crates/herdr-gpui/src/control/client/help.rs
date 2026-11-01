@@ -65,7 +65,7 @@ fn family(name: &str) -> &'static str {
             "herdr-gpui ui sidebar [on|off|toggle]\nherdr-gpui ui statusbar [on|off|toggle]\nherdr-gpui ui font-size +|-|reset|POINTS\nherdr-gpui ui panel workspaces|overview|pull-requests|issues|security|automations|usage\n    For this window and session; settings are changed with `config`."
         }
         "tab" => {
-            "herdr-gpui tab [list]\n    The app's own tabs: pages, code, reviews, Devices.\n    Terminal tabs belong to Herdr: use `herdr tab`.\nherdr-gpui tab focus|close ID\n    Show a tab, switching to its workspace, or close it."
+            "herdr-gpui tab [list]\n    The app's own tabs: pages, code, reviews, Git graph, Devices.\n    Terminal tabs belong to Herdr: use `herdr tab`.\nherdr-gpui tab focus|close ID\n    Show a tab, switching to its workspace, or close it."
         }
         "code" => {
             "herdr-gpui code open FILE[:LINE]\n    Show a local file read-only in a code tab, at LINE.\nherdr-gpui code edit FILE[:LINE]\n    Open it in your terminal editor ($VISUAL, $EDITOR) in a new pane."
@@ -78,6 +78,9 @@ fn family(name: &str) -> &'static str {
         }
         "review" => {
             "herdr-gpui review [open]\n    Open the review of the caller's workspace's uncommitted changes."
+        }
+        "graph" => {
+            "herdr-gpui graph [open]\n    Open the read-only Git graph of the caller's workspace's checkout."
         }
         "chat" => {
             "herdr-gpui chat [status]\n    The window's herdr-acp chat panes on this machine or an SSH host: pane, agent, status,\n    and whether the native chat view or the terminal shows. Exits 4 when\n    there are none.\nherdr-gpui chat show|hide|toggle [--pane ID]\n    Show the native chat view over the pane, or its terminal, for this\n    window. The pane is the caller's own, else the focused one. Exits 5 when\n    it runs no chat the window can show.\nherdr-gpui chat new AGENT [--pane ID]\n    Open a tab running a herdr-acp chat with AGENT (claude, codex, copilot,\n    gemini, opencode, or pi) in the workspace and folder of the pane, else the\n    caller's own. On an SSH host the tab runs that host's herdr-acp, from\n    ~/.herdr/bin or PATH. The chat view attaches once the program starts.\n    Exits 8 when ACP chats are off in Settings, herdr-acp is missing here,\n    the host cannot be reached, or the agent is not installed there."

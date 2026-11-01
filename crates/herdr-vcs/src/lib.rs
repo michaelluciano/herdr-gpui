@@ -10,5 +10,6 @@ pub mod checkpoint;
 pub mod code_index;
 mod error;
 pub mod git;
+pub mod graph;
 
 pub use error::{Error, Result};

@@ -44,6 +44,7 @@ pub(super) fn serve(
         TabOp::Devices => arrive::devices(&caller, incoming, watches, cx),
         TabOp::Orchestrator { repo } => arrive::orchestrator(&caller, repo, incoming, watches, cx),
         TabOp::Review => arrive::review(&caller, incoming, watches, cx),
+        TabOp::Graph => arrive::graph(&caller, incoming, watches, cx),
         TabOp::Px0 => arrive::px0(&caller, incoming, watches, cx),
     }
 }
@@ -62,6 +63,7 @@ fn kind(tab: &Tab) -> TabKind {
         Some(Location::Orchestrator { .. }) => TabKind::Orchestrator,
         Some(Location::Code { .. }) => TabKind::Code,
         Some(Location::Devices) => TabKind::Devices,
+        Some(Location::Graph { .. }) => TabKind::Graph,
     }
 }
 
@@ -74,10 +76,12 @@ fn location(tab: &Tab) -> Option<String> {
     Some(match tab.location.as_ref()? {
         Location::Web { url } => url.as_str().to_owned(),
         Location::Local { file } => file.path().display().to_string(),
-        Location::Review { checkout } => checkout
-            .checkout
-            .clone()
-            .or_else(|| checkout.repo_key.clone())?,
+        Location::Review { checkout } | Location::Graph { checkout } => {
+            checkout
+                .checkout
+                .clone()
+                .or_else(|| checkout.repo_key.clone())?
+        }
         Location::Orchestrator { repo } => repo.checkout.clone(),
         Location::Code { file } => file.path.clone(),
         Location::Devices => return None,

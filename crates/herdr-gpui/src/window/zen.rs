@@ -267,9 +267,10 @@ impl HerdrWindow {
             })
             .and_then(|id| {
                 let code = self.code_views.get(&id).map(|view| &view.focus);
+                let graph = || self.graph_focus.get(&id);
                 let review = || self.reviews.get(&id).map(|review| review.focus());
                 let devices = || self.devices_overview.pages.get(&id).map(|page| &page.focus);
-                code.or_else(review).or_else(devices)
+                code.or_else(graph).or_else(review).or_else(devices)
             });
         match own {
             Some(focus) if focus.contains_focused(window, cx) => {}

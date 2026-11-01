@@ -1,5 +1,5 @@
-//! The app's own tabs: pages, code, reviews, the orchestrator, and the
-//! Devices overview, which Herdr does not know about.
+//! The app's own tabs: pages, code, reviews, the Git graph, the
+//! orchestrator, and the Devices overview, which Herdr does not know about.
 use serde::{Deserialize, Serialize};
 
 /// How long a page may take to hand back its text or picture.
@@ -68,6 +68,8 @@ pub enum TabOp {
     },
     /// The review of the caller's workspace's uncommitted changes.
     Review,
+    /// The read-only commit graph of the caller's workspace's checkout.
+    Graph,
     Px0,
 }
 
@@ -80,6 +82,7 @@ impl TabOp {
             | Self::Devices
             | Self::Orchestrator { .. }
             | Self::Review
+            | Self::Graph
             | Self::Px0 => ARRIVE_WAIT_SECONDS,
             Self::List { .. }
             | Self::Focus { .. }
@@ -113,6 +116,7 @@ impl TabKind {
             Self::Review => "review",
             Self::Orchestrator => "orchestrator",
             Self::Devices => "devices",
+            Self::Graph => "graph",
             Self::Editor => "editor",
         }
     }
@@ -133,6 +137,7 @@ pub enum TabKind {
     Review,
     Orchestrator,
     Devices,
+    Graph,
     /// The workspace's VS Code tab.
     Editor,
 }

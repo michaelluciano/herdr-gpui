@@ -17,5 +17,7 @@ pub enum Error {
     Git(#[from] crate::git::Error),
     #[error(transparent)]
     GitHub(#[from] herdr_github::Error),
+    #[error(transparent)]
+    Graph(#[from] crate::graph::Error),
     // keep-sorted end
 }

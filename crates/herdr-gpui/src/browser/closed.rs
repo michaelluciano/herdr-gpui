@@ -272,6 +272,12 @@ impl Store {
                 .in_workspace(&tab.scope, &tab.workspace_id)
                 .find(|open| matches!(open.location, Some(Location::Devices)))
                 .map(|open| open.id),
+            Some(Location::Graph { checkout }) => self
+                .in_workspace(&tab.scope, &tab.workspace_id)
+                .find(|open| {
+                    matches!(&open.location, Some(Location::Graph { checkout: existing }) if existing == checkout)
+                })
+                .map(|open| open.id),
             Some(Location::Review { checkout }) => self
                 .in_workspace(&tab.scope, &tab.workspace_id)
                 .find(|open| {
@@ -395,6 +401,7 @@ impl HerdrWindow {
                 self.poll_code_views(cx);
                 self.poll_orchestrators(window, cx);
                 self.poll_devices_overview(cx);
+                self.poll_graphs(cx);
                 match self.ensure_layout().map(|layout| layout.active()) {
                     Some(group) => self.move_tab_to_group(Pick::Page(id), group, window, cx),
                     None => self.show_browser_tab(id, window, cx),

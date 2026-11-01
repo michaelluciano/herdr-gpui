@@ -1,4 +1,4 @@
-//! `tab`, `code`, `devices`, `orchestrator`, and `review`.
+//! `tab`, `code`, `devices`, `orchestrator`, `review`, and `graph`.
 use super::{Args, CliError, unknown};
 use std::{ffi::OsString, path::PathBuf};
 
