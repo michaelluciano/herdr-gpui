@@ -3,7 +3,7 @@
 //! caches only.
 
 use super::{
-    DEVICE_FOOTER_HEIGHT, STATUS_WIDTH, SidebarDrag,
+    DEVICE_FOOTER_HEIGHT, ICON_RESERVE, STATUS_WIDTH, SidebarDrag,
     agents::Indicators,
     agents_sort,
     cell::{Cell, Fold, RowContext, RowData, WorkspaceRow, layout_for},
@@ -27,6 +27,7 @@ use gpui::{prelude::*, *};
 
 mod agent_rows;
 mod device_tree;
+mod drop_shifts;
 mod nested_agents;
 mod worktree_group;
 
@@ -165,6 +166,18 @@ impl HerdrWindow {
                 space_rows += rows;
                 continue;
             }
+            if headed && !(multi && endpoint.collapsed) {
+                // Where a workspace's name starts: past its status mark and
+                // the icon slot a workspace name reserves.
+                let indent = look.content_x()
+                    + if multi { look.nest_indent() } else { 0. }
+                    + indicators.width(&self.config.sidebar)
+                    + look.density.gap()
+                    + ICON_RESERVE;
+                let (list, rows) = self.append_llm_rows(spaces, endpoint, indent, look, cx);
+                spaces = list;
+                space_rows += rows;
+            }
             let row_cx = RowContext {
                 indicators,
                 font,
@@ -197,29 +210,13 @@ impl HerdrWindow {
             // Each unit's shift for the drop in preview, from the heights the
             // last frame laid out: shifting moves rows, never resizes them.
             let base = space_rows;
-            let shifts = plan.as_ref().map_or_else(Vec::new, |plan| {
-                drop_requests = (0..=plan.len())
-                    .map(|slot| plan.request(&snapshot.workspaces, slot))
-                    .collect();
-                drop_dragged = plan.dragged();
-                let mut heights = vec![0.; plan.len()];
-                for (position, entry) in entries.iter().enumerate() {
-                    if let (Some(unit), Some(bounds)) = (
-                        plan.unit_of(entry.0),
-                        self.sidebar_scroll[0].bounds_for_item(base + position),
-                    ) {
-                        heights[unit] += f32::from(bounds.size.height);
-                        if spaces_custom && !entry.1 {
-                            heights[unit] += f32::from(self.config.sidebar_layout.spaces.row_gap)
-                                * line_height(font);
-                        }
-                    }
-                }
-                let slot = drag
-                    .and_then(|drag| drag.target.as_ref())
-                    .map_or(plan.dragged(), |target| target.slot);
-                crate::reorder::preview(&heights, plan.dragged(), slot)
-            });
+            let shifts = self.drop_shifts(
+                plan.as_ref(),
+                &snapshot.workspaces,
+                (&entries, base),
+                (drag, spaces_custom),
+                (&mut drop_requests, &mut drop_dragged),
+            );
             // A child closes the group when no child follows it.
             let closes: Vec<bool> = (0..entries.len())
                 .map(|position| {

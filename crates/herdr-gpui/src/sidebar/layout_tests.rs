@@ -57,6 +57,8 @@ mod layouts;
 #[cfg(test)]
 mod listening_ports;
 #[cfg(test)]
+mod llm_rows;
+#[cfg(test)]
 mod local_counts_chip;
 #[cfg(test)]
 mod nested_agents;
@@ -611,6 +613,7 @@ pub(crate) fn fixture_window(window: &mut Window, cx: &mut Context<HerdrWindow>)
         graph_scroll: Default::default(),
         graphs: Default::default(),
         handoffs: Default::default(),
+        llm_launch: Default::default(),
         deliveries: Default::default(),
         terminal_notes: Default::default(),
         notes_width: crate::panel_resize::NOTES,

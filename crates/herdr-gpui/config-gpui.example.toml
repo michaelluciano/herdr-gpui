@@ -400,6 +400,30 @@ size = 12
 # tint = "#7aa2f7"
 # apply_to = ["sidebar", "terminal"]
 
+# LLM launcher rows: one clickable row under a host's header in the sidebar,
+# per entry, up to 16. host is a host's label or id ("Local" or "local" is this
+# computer). kind = "llama" starts a local llama-server model and opens its web
+# UI: port is the port it serves on, start is the shell command that starts it
+# (run only when the port is not already serving), and url overrides
+# http://127.0.0.1:PORT/. kind = "terminal" opens a tab on that host and types
+# run into its shell. Rows that share a group on one host are mutually
+# exclusive: while one is running or loading, the others turn gray and a click
+# on them only says what is holding the slot. This app never stops a model.
+# Both start and run are typed by you in this file and are bounded to 512 bytes
+# with no control characters.
+# [[llm_launchers]]
+# label = "coder"
+# host = "Local"
+# kind = "llama"
+# group = "models"
+# port = 8081
+# start = "$HOME/llm/llm coder"
+# [[llm_launchers]]
+# label = "nemotron"
+# host = "my-server"
+# kind = "terminal"
+# run = "ollama run nemotron-3-nano:4b"
+
 [tabs]
 # Default: "Menlo" on macOS, "Cascadia Mono" on Windows (Consolas when
 # missing), "DejaVu Sans Mono" on Linux (or an installed monospace family such

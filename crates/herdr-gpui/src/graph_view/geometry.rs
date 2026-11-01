@@ -51,7 +51,7 @@ pub(crate) fn gutter_width(lane_count: usize, lane_width: f32) -> f32 {
 /// a floor, past which the gutter grows again.
 pub(crate) fn lane_metrics(lane_count: usize) -> (f32, f32) {
     const NATURAL: f32 = 14.0;
-    const GUTTER_CAP: f32 = 168.0;
+    const GUTTER_CAP: f32 = 96.0;
     const LANE_FLOOR: f32 = 4.0;
     if lane_count == 0 {
         return (NATURAL, 0.0);
