@@ -6,11 +6,11 @@ mod moved;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod spread;
 
-fn offered(view: &HerdrWindow) -> Option<&'static str> {
+fn offered(view: &HerdrWindow) -> Option<String> {
     view.workspace_items()
         .into_iter()
         .find(|(action, _)| *action == WorkspaceMenuAction::FanOut)
-        .map(|(_, label)| label)
+        .map(|(_, label)| label.to_string())
 }
 
 #[gpui::test]
@@ -25,18 +25,22 @@ fn offered_for_git_workspaces_on_scriptable_hosts(cx: &mut gpui::TestAppContext)
             snapshot.workspaces = crate::sidebar::layout_tests::snapshot(7).workspaces;
             snapshot.workspaces[0].branch = None;
             view.open_workspace_menu("w4", Default::default(), window, cx);
-            assert_eq!(offered(view), None, "a custom socket cannot be scripted");
+            assert_eq!(
+                offered(view).as_deref(),
+                None,
+                "a custom socket cannot be scripted"
+            );
             view.dismiss_menu(window, cx);
             view.endpoints[0].connection.target = herdr_client::ConnectTarget::Local;
             // A main checkout, and a linked one through its main checkout.
             for workspace in ["w3", "w4"] {
                 view.open_workspace_menu(workspace, Default::default(), window, cx);
-                assert_eq!(offered(view), expected, "{workspace}");
+                assert_eq!(offered(view).as_deref(), expected, "{workspace}");
                 view.dismiss_menu(window, cx);
             }
             // A workspace outside Git has nothing to branch.
             view.open_workspace_menu("w0", Default::default(), window, cx);
-            assert_eq!(offered(view), None);
+            assert_eq!(offered(view).as_deref(), None);
             view.dismiss_menu(window, cx);
         })
     });

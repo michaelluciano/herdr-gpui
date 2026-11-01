@@ -26,7 +26,7 @@ fn a_moved_main_checkout_offers_no_fan_out(cx: &mut gpui::TestAppContext) {
             // The linked checkout's only main checkout has wandered off too.
             for workspace in ["w3", "w4"] {
                 view.open_workspace_menu(workspace, Default::default(), window, cx);
-                assert_eq!(offered(view), None, "{workspace}");
+                assert_eq!(offered(view).as_deref(), None, "{workspace}");
                 view.dismiss_menu(window, cx);
             }
         })

@@ -149,6 +149,8 @@ pub(crate) enum WorkspaceMenuAction {
     /// Build the repository's sandbox images ahead of a dispatch.
     #[cfg(feature = "cloud")]
     SandboxImages,
+    /// Copy the full id of the agent session at this index of the target.
+    CopySession(usize),
 }
 
 impl Page {
@@ -208,6 +210,7 @@ impl WorkspaceMenuAction {
             Self::Dialog(WorkspaceAction::NewTab | WorkspaceAction::NewWorkspace) => {
                 "icons/plus.svg"
             }
+            Self::CopySession(_) => "icons/copy.svg",
             Self::Collapse => "icons/chevron-up.svg",
             Self::Expand => "icons/chevron-down.svg",
             Self::Teleport | Self::GoToTeleported => "icons/teleport.svg",

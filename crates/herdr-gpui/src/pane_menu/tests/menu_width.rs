@@ -49,12 +49,12 @@ fn open_menu(
     (view, cx)
 }
 
-fn labels(view: &Entity<HerdrWindow>, cx: &mut VisualTestContext) -> Vec<&'static str> {
+fn labels(view: &Entity<HerdrWindow>, cx: &mut VisualTestContext) -> Vec<String> {
     view.read_with(cx, |v, _| {
         let pane = v.menu.pane.as_ref().unwrap();
         pane.actions()
             .into_iter()
-            .map(|action| action.label(&pane.target))
+            .map(|action| action.label(&pane.target).to_string())
             .collect()
     })
 }
@@ -67,18 +67,18 @@ fn pane_menu_shows_every_label_in_full(cx: &mut TestAppContext) {
     ] {
         let (view, cx) = open_menu(routed, 800., cx);
         let labels = labels(&view, cx);
-        assert!(labels.contains(&"Swap with Focused Pane"));
-        assert!(labels.contains(&longest));
+        assert!(labels.contains(&"Swap with Focused Pane".to_owned()));
+        assert!(labels.contains(&longest.to_owned()));
         let font_size = view.read_with(cx, |v, _| px(v.config.ui.size));
         let panel = cx.debug_bounds("menu-panel").unwrap();
-        for (index, label) in labels.into_iter().enumerate() {
+        for (index, label) in labels.iter().enumerate() {
             let row = cx.debug_bounds(ROWS[index]).unwrap();
             let text = cx.debug_bounds(LABELS[index]).unwrap();
             let natural = cx.update(|window, _| {
                 window
                     .text_system()
                     .shape_line(
-                        label.into(),
+                        label.clone().into(),
                         font_size,
                         &[window.text_style().to_run(label.len())],
                         None,
