@@ -43,6 +43,8 @@ mod gpu_line;
 #[cfg(test)]
 mod handoff_copy;
 #[cfg(test)]
+mod handoff_open;
+#[cfg(test)]
 mod handoffs;
 #[cfg(test)]
 mod handoffs_history;
