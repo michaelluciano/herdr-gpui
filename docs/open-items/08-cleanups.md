@@ -1,6 +1,6 @@
 # Cleanups and known nits
 
-Status: not started
+Status: not started (tracked by a draft PR; no code yet)
 
 ## Goal
 
