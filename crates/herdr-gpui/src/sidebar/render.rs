@@ -8,7 +8,7 @@ use super::{
     agents_sort,
     cell::{Cell, Fold, RowContext, RowData, WorkspaceRow, layout_for},
     label_text,
-    layout::{self, SidebarLook},
+    layout::{self},
     line_height,
     reorder::{self, Plan},
     row::{RowIcon, RowLift, RowTree},
@@ -18,9 +18,7 @@ use super::{
     workspaces::{displayed_workspace_status, workspace_badge, workspace_label, workspace_note},
 };
 use crate::{
-    Command, HerdrWindow, NavigationTarget,
-    avatars::Checkout,
-    config::{AgentsPlacement, FontConfig, Theme},
+    Command, HerdrWindow, NavigationTarget, avatars::Checkout, config::AgentsPlacement,
     fonts::StyledFont,
 };
 use gpui::{prelude::*, *};
@@ -970,24 +968,4 @@ impl HerdrWindow {
     }
 }
 
-pub(super) fn header(
-    label: &'static str,
-    font: &FontConfig,
-    theme: &Theme,
-    look: SidebarLook,
-) -> Div {
-    div()
-        .debug_selector(|| format!("header-{label}"))
-        .flex_none()
-        .h(px(line_height(font) + 2. * look.density.header_padding()))
-        .px(px(look.content_x()))
-        .flex()
-        .items_center()
-        .text_size(px(font.size))
-        .text_color(rgb(theme.muted))
-        .child(
-            div()
-                .debug_selector(|| format!("header-label-{label}"))
-                .child(label_text(&look.header_label(label))),
-        )
-}
+pub(super) use super::header::{header, header_frame};

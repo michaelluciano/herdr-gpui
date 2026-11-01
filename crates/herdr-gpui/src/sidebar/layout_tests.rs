@@ -43,6 +43,8 @@ mod gpu_line;
 #[cfg(test)]
 mod handoffs;
 #[cfg(test)]
+mod handoffs_history;
+#[cfg(test)]
 mod host_agents;
 #[cfg(test)]
 mod host_groups;

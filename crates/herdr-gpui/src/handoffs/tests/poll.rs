@@ -1,5 +1,6 @@
 use super::*;
 use crate::HerdrWindow;
+use crate::handoffs::classify::Shelf;
 use crate::sidebar::layout_tests::{SidebarFixture, fixture_window};
 use gpui::{AppContext as _, Entity, VisualTestContext, px, size};
 use std::{
@@ -45,7 +46,23 @@ fn poll(view: &Entity<HerdrWindow>, cx: &mut VisualTestContext, now: Instant, ro
 
 fn ids(view: &Entity<HerdrWindow>, cx: &mut VisualTestContext) -> Vec<String> {
     view.read_with(cx, |view, _| {
-        view.handoffs.list.iter().map(|h| h.id.clone()).collect()
+        view.handoffs
+            .board
+            .active
+            .iter()
+            .map(|h| h.id.clone())
+            .collect()
+    })
+}
+
+fn history(view: &Entity<HerdrWindow>, cx: &mut VisualTestContext) -> Vec<(String, Shelf)> {
+    view.read_with(cx, |view, _| {
+        view.handoffs
+            .board
+            .history
+            .iter()
+            .map(|shelved| (shelved.handoff.id.clone(), shelved.shelf))
+            .collect()
     })
 }
 
@@ -96,8 +113,24 @@ fn a_changed_directory_updates_the_list_after_five_seconds(cx: &mut gpui::TestAp
     assert_eq!(ids(&view, cx), ["b", "a"]);
     assert!(notified.get() > before);
 
-    // Claiming a file drops it at the next due poll.
+    // Claiming a file moves it to the history at the next due poll.
     std::fs::write(&first, "---\nid: a\nstatus: claimed\n---\n").unwrap();
     poll(&view, cx, t0 + Duration::from_secs(12), &root);
     assert_eq!(ids(&view, cx), ["b"]);
+    assert_eq!(history(&view, cx), [("a".to_owned(), Shelf::PickedUp)]);
+}
+
+#[gpui::test]
+fn a_poll_shelves_a_handoff_its_successor_names_as_prev(cx: &mut gpui::TestAppContext) {
+    let root = Root::new("poll-prev");
+    root.session("p", "a.md", open_header("a", "2026-10-30"));
+    root.session(
+        "p",
+        "b.md",
+        "---\nid: b\nprev: a\nstatus: open\ncreated: 2026-10-31T10:00:00\n---\n",
+    );
+    let (view, _notified, cx) = counted(cx);
+    poll(&view, cx, Instant::now(), &root);
+    assert_eq!(ids(&view, cx), ["b"]);
+    assert_eq!(history(&view, cx), [("a".to_owned(), Shelf::Superseded)]);
 }

@@ -8,6 +8,7 @@ mod animated;
 mod cell;
 mod device_drag;
 mod handoffs;
+mod header;
 mod host_row;
 mod hover;
 mod layout;

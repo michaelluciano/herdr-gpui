@@ -9,12 +9,18 @@ use crate::{
 };
 use gpui::{Entity, Modifiers, VisualTestContext, px, size};
 
-fn handoff(id: &str, project: &str, created: &str) -> Handoff {
+/// An open handoff with the given id, project and created.
+pub(super) fn handoff(id: &str, project: &str, created: &str) -> Handoff {
     Handoff {
         path: std::env::temp_dir().join(format!("herdr-handoff-render/{project}/sessions/{id}.md")),
         project: project.into(),
         id: id.into(),
         created: created.into(),
+        status: "open".into(),
+        session_id: String::new(),
+        parent: String::new(),
+        prev: String::new(),
+        claimed_by: String::new(),
     }
 }
 
@@ -30,8 +36,9 @@ fn three() -> Vec<Handoff> {
     ]
 }
 
-/// A focused-workspace window with `list` as its handoffs.
-fn window(
+/// A focused-workspace window showing `list` as its handoffs, sorted the
+/// way the poll sorts them.
+pub(super) fn window(
     cx: &mut gpui::TestAppContext,
     mode: Option<LayoutMode>,
     list: Vec<Handoff>,
@@ -47,7 +54,7 @@ fn window(
             shown.focused_tab_id = Some("t0".into());
             view.live.snapshot = Some(Arc::new(shown));
             view.live.status = ConnectionStatus::Connected;
-            view.handoffs.list = list;
+            view.handoffs.board = crate::handoffs::classify(list);
             view
         });
         cx.observe(&view, |_, _, cx| cx.notify()).detach();
@@ -59,7 +66,7 @@ fn window(
     (view, cx)
 }
 
-fn texts(cx: &mut VisualTestContext) -> Vec<String> {
+pub(super) fn texts(cx: &mut VisualTestContext) -> Vec<String> {
     cx.update(|_, cx| cx.global::<TextProbes>().0.keys().cloned().collect())
 }
 
@@ -94,16 +101,16 @@ fn open_handoffs_list_below_the_workspaces_and_agents(cx: &mut gpui::TestAppCont
 }
 
 #[gpui::test]
-fn each_row_shows_its_id_and_project_with_the_created_date(cx: &mut gpui::TestAppContext) {
+fn each_row_shows_its_id_and_project_with_the_written_time(cx: &mut gpui::TestAppContext) {
     let (_view, cx) = window(cx, None, three());
     let shown = texts(cx);
     for expected in [
         "S-2026-10-31-e8da4cd3",
-        "claude-setup \u{b7} 2026-10-31",
+        "claude-setup \u{b7} 10-31 13:41",
         "S38-next",
-        "kb \u{b7} 2026-10-31",
+        "kb \u{b7} 10-31",
         "S-2026-10-30-aa11bb22",
-        "remora \u{b7} 2026-10-30",
+        "remora \u{b7} 10-30 09:00",
     ] {
         assert!(
             shown.iter().any(|text| text == expected),
