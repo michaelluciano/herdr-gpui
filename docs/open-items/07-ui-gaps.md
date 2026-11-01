@@ -1,6 +1,6 @@
 # UI gaps against the mockup
 
-Status: not started
+Status: not started (tracked by a draft PR; no code yet)
 
 ## Goal
 
