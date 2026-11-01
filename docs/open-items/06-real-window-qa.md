@@ -1,6 +1,6 @@
 # Real-window QA
 
-Status: needs verification
+Status: needs verification (tracked by a draft PR; no code yet)
 
 ## Goal
 
@@ -9,13 +9,13 @@ Confirm in a real window the behavior that unit tests do not cover. These checks
 ## Checks
 
 - The git graph gutter is 96 px wide (`GUTTER_CAP` in `crates/herdr-gpui/src/graph_view/geometry.rs`).
-- Clicking a handoff row opens it in a code tab.
+- Clicking a handoff row opens it in a code tab. Verified 2026-11-01 by the operator.
 - Clicking a stopped Mac launcher row shows "starting", starts the model, and opens its web UI.
 - Clicking a running launcher row only opens the UI.
 - A blocked (gray) launcher row flashes the name of the model holding the slot and starts nothing.
 - The remote terminal launcher row opens a tab, types its command, and runs it.
 - A host with no workspace shows its flash. A click while another tab is opening shows its flash.
-- Handoffs panel: the title folds; `picked up N` toggles the history; rows show `MM-DD HH:MM`, or `MM-DD` when no time is known.
+- Handoffs panel: the title folds; `picked up N` toggles the history; rows show `MM-DD HH:MM`, or `MM-DD` when no time is known. 2026-11-01: timestamps seen as `MM-DD HH:MM`; header `picked up 34 8` matches 42 handoff files on disk (8 active shown, 34 hidden); history toggle verified by the operator; fold not yet checked.
 
 ## Not covered by any automated test
 
