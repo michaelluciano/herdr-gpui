@@ -43,7 +43,7 @@ fn a_repo_with_many_lanes_gets_a_capped_gutter(cx: &mut gpui::TestAppContext) {
     });
     assert!(lanes >= 30, "fixture should make 30 lanes, got {lanes}");
     let width = f32::from(bounds(cx, "graph-gutter").size.width);
-    assert!((width - 168.0).abs() < 0.5, "gutter is {width}px, want 168");
+    assert!((width - 120.0).abs() < 0.5, "gutter is {width}px, want 120");
 }
 
 #[gpui::test]

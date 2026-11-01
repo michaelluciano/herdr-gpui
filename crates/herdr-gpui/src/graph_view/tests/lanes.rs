@@ -7,24 +7,28 @@ fn small_lane_counts_keep_the_natural_width() {
 }
 
 #[test]
-fn the_cap_is_reached_at_twelve_lanes() {
-    assert_eq!(lane_metrics(12), (14.0, 168.0));
+fn six_lanes_still_fit_at_the_natural_width() {
+    assert_eq!(lane_metrics(6), (14.0, 84.0));
 }
 
 #[test]
 fn above_the_cap_lanes_shrink_to_fit() {
+    let (lane, gutter) = lane_metrics(7);
+    assert!((lane - 96.0 / 7.0).abs() < 0.001, "lane width {lane}");
+    assert!((gutter - 96.0).abs() < 0.01, "gutter {gutter}");
+}
+
+#[test]
+fn the_floor_is_reached_at_twenty_four_lanes() {
     let (lane, gutter) = lane_metrics(24);
-    assert!((lane - 7.0).abs() < 0.001, "lane width {lane}");
-    assert!((gutter - 168.0).abs() < 0.01, "gutter {gutter}");
-    let (lane, gutter) = lane_metrics(30);
-    assert!((lane - 5.6).abs() < 0.001, "lane width {lane}");
-    assert!((gutter - 168.0).abs() < 0.01, "gutter {gutter}");
+    assert!((lane - 4.0).abs() < 0.001, "lane width {lane}");
+    assert!((gutter - 96.0).abs() < 0.01, "gutter {gutter}");
 }
 
 #[test]
 fn lanes_never_shrink_below_the_floor() {
-    let (lane, gutter) = lane_metrics(42);
-    assert!((lane - 4.0).abs() < 0.001 && (gutter - 168.0).abs() < 0.01);
+    let (lane, gutter) = lane_metrics(30);
+    assert!((lane - 4.0).abs() < 0.001 && (gutter - 120.0).abs() < 0.01);
     let (lane, gutter) = lane_metrics(100);
     assert_eq!(lane, 4.0);
     assert_eq!(gutter, 400.0);
@@ -35,7 +39,7 @@ fn zero_lanes_do_not_panic_or_produce_nan() {
     let (lane, gutter) = lane_metrics(0);
     assert!(lane.is_finite() && gutter.is_finite());
     assert!(lane >= 0.0 && gutter >= 0.0);
-    assert!(gutter <= 168.0);
+    assert!(gutter <= 96.0);
 }
 
 #[test]
