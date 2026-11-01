@@ -1,6 +1,6 @@
 # GitHub account chip
 
-Status: not started
+Status: not started (tracked by a draft PR; no code yet)
 
 ## Goal
 
