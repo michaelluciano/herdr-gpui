@@ -16,6 +16,9 @@ pub(super) fn handoff(id: &str, project: &str, created: &str) -> Handoff {
         parent: String::new(),
         prev: String::new(),
         claimed_by: String::new(),
+        // The fixture's focused workspace is on `main`.
+        branch: "main".into(),
+        cwd: String::new(),
     }
 }
 
@@ -80,36 +83,29 @@ fn open_handoffs_list_below_the_workspaces_and_agents(cx: &mut gpui::TestAppCont
     if let Some(agents) = cx.debug_bounds("agents-section") {
         assert!(agents.bottom() <= section.top(), "below the agents list");
     }
-    let rows: Vec<_> = (0..3)
-        .map(|n| {
-            let name: &'static str = Box::leak(format!("handoff-row-{n}").into_boxed_str());
-            cx.debug_bounds(name).unwrap_or_else(|| panic!("no {name}"))
-        })
-        .collect();
-    for pair in rows.windows(2) {
-        assert!(pair[0].bottom() <= pair[1].top(), "rows stack in order");
-    }
-    for row in &rows {
-        assert!(section.top() <= row.top() && row.bottom() <= section.bottom());
-    }
-    assert!(cx.debug_bounds("handoff-row-3").is_none());
+    // Only the newest handoff on the focused workspace's branch shows.
+    let row = cx
+        .debug_bounds("handoff-row-0")
+        .expect("no current handoff");
+    assert!(section.top() <= row.top() && row.bottom() <= section.bottom());
+    assert!(cx.debug_bounds("handoff-row-1").is_none());
 }
 
 #[gpui::test]
-fn each_row_shows_its_id_and_project_with_the_written_time(cx: &mut gpui::TestAppContext) {
+fn the_current_row_shows_its_id_and_project_with_the_written_time(cx: &mut gpui::TestAppContext) {
     let (_view, cx) = window(cx, None, three());
     let shown = texts(cx);
-    for expected in [
-        "S-2026-10-31-e8da4cd3",
-        "claude-setup \u{b7} 10-31 13:41",
-        "S38-next",
-        "kb \u{b7} 10-31",
-        "S-2026-10-30-aa11bb22",
-        "remora \u{b7} 10-30 09:00",
-    ] {
+    for expected in ["S-2026-10-31-e8da4cd3", "claude-setup \u{b7} 10-31 13:41"] {
         assert!(
             shown.iter().any(|text| text == expected),
             "{expected:?} in {shown:?}"
+        );
+    }
+    // Older handoffs on the same branch stay out of the list.
+    for hidden in ["S38-next", "S-2026-10-30-aa11bb22"] {
+        assert!(
+            !shown.iter().any(|text| text == hidden),
+            "{hidden:?} hidden"
         );
     }
     assert!(
@@ -118,7 +114,7 @@ fn each_row_shows_its_id_and_project_with_the_written_time(cx: &mut gpui::TestAp
             .any(|text| text.to_lowercase().contains("handoffs")),
         "a Handoffs heading in {shown:?}"
     );
-    assert!(shown.iter().any(|text| text.contains('3')), "the count");
+    assert!(shown.iter().any(|text| text == "1"), "the count");
 }
 
 #[gpui::test]

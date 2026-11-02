@@ -80,7 +80,7 @@ fn the_history_control_lists_shelved_rows_below_the_active_ones(cx: &mut gpui::T
 
     click(cx, "handoffs-history-toggle");
     assert!(view.read_with(cx, |view, _| view.handoffs.history_open));
-    let last_active = cx.debug_bounds("handoff-row-1").expect("no active row");
+    let last_active = cx.debug_bounds("handoff-row-0").expect("no active row");
     let first_shelved = cx
         .debug_bounds("handoff-history-row-0")
         .expect("no history row");
