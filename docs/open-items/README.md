@@ -12,6 +12,8 @@ This folder lists the work that is planned or unverified in this fork, one file 
 | Real-window QA of recent features | [06-real-window-qa.md](06-real-window-qa.md) | needs verification |
 | Gaps against the UI mockup | [07-ui-gaps.md](07-ui-gaps.md) | not started |
 | Cleanups and known nits | [08-cleanups.md](08-cleanups.md) | not started |
+| Nemotron launcher is not accessible | [09-nemotron-access.md](09-nemotron-access.md) | parked |
+| LLM usage per host in the usage panel | [10-host-llm-usage.md](10-host-llm-usage.md) | parked |
 
 ## Done recently
 
