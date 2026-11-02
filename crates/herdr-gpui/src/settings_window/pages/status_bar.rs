@@ -69,8 +69,8 @@ impl SettingsWindow {
                 ui::row(theme, "status-usage", "Usage")
                     .description(
                         "Plan usage for signed-in AI services. Compact shows each service's \
-                         tightest limit as one share; Detailed adds a meter and its two \
-                         tightest windows.",
+                         tightest limit as one share; Detailed stacks its session \
+                         window over its weekly one, each with a meter and the share left.",
                     )
                     .control(self.detail_control(
                         "status-usage-detail",

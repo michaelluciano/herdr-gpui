@@ -19,9 +19,10 @@ const STATUS_GLYPH: f32 = 16.;
 const MODEL_WIDTH: f32 = 160.;
 
 impl HerdrWindow {
-    /// The bar's height, which grows with the UI font.
+    /// The bar's height: the sidebar's device footer, so the bar can stack
+    /// two lines, or taller when the UI font needs it.
     pub(super) fn status_bar_height(&self) -> f32 {
-        (self.config.ui.size * 1.5 + 4.).max(22.)
+        (self.config.ui.size * 1.5 + 4.).max(crate::sidebar::DEVICE_FOOTER_HEIGHT)
     }
 
     pub(super) fn render_status_bar(&self, cx: &mut Context<Self>) -> Stateful<Div> {
@@ -194,6 +195,7 @@ impl HerdrWindow {
     fn render_agent_model(&self, cx: &mut Context<Self>) -> Option<Stateful<Div>> {
         let agent = self.focused_agent()?;
         let label = model_label(agent)?;
+        let (model, effort) = model_lines(agent)?;
         let picker = has_model_picker(agent);
         let segment = div()
             .id("agent-model")
@@ -210,13 +212,28 @@ impl HerdrWindow {
                     segment.role(Role::Label).aria_value(spoken)
                 }
             })
+            .flex()
+            .flex_col()
+            .justify_center()
             .flex_none()
             .max_w(px(MODEL_WIDTH))
-            .truncate()
+            .h_full()
             .px(px(6.))
             .rounded(px(crate::config::corners::CONTROL))
             .text_color(rgb(self.theme.muted))
-            .child(label);
+            .child(
+                div()
+                    .debug_selector(|| "agent-model-name".into())
+                    .truncate()
+                    .text_color(rgb(self.theme.foreground))
+                    .child(model),
+            )
+            .children(effort.map(|effort| {
+                div()
+                    .debug_selector(|| "agent-model-effort".into())
+                    .truncate()
+                    .child(effort)
+            }));
         if !picker {
             return Some(segment);
         }
@@ -474,18 +491,25 @@ impl HerdrWindow {
 /// The agent's reported model, followed by its effort level when one is
 /// reported too, or `None` when no model is reported.
 pub(super) fn model_label(agent: &herdr_client::protocol::ClientShellAgent) -> Option<String> {
+    let (model, effort) = model_lines(agent)?;
+    Some(match effort {
+        Some(effort) => format!("{model} \u{b7} {effort}"),
+        None => model,
+    })
+}
+
+/// The model, and the effort that goes on the line below it.
+fn model_lines(
+    agent: &herdr_client::protocol::ClientShellAgent,
+) -> Option<(String, Option<String>)> {
     let token = |key: &str| {
         agent
             .tokens
             .iter()
             .find(|(name, _)| name == key)
-            .map(|(_, value)| value.as_str())
+            .map(|(_, value)| value.clone())
     };
-    let model = token("model")?;
-    Some(match token("effort") {
-        Some(effort) => format!("{model} \u{b7} {effort}"),
-        None => model.to_owned(),
-    })
+    Some((token("model")?, token("effort")))
 }
 
 /// Whether typing `/model` in the agent opens its model picker. Only Claude's
