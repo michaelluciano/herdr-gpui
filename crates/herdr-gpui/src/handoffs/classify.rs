@@ -92,3 +92,24 @@ fn superseded(index: usize, list: &[Handoff]) -> bool {
 fn newer(a: &Handoff, b: &Handoff) -> bool {
     a.created > b.created || (a.created == b.created && a.path < b.path)
 }
+
+/// The newest of `active` (newest first, as the board keeps it) that was
+/// written for the focused workspace: on its `branch`, inside its checkout
+/// `cwd`, or both when the handoff names both. A handoff naming neither
+/// belongs to no workspace.
+pub(crate) fn current<'a>(
+    active: &'a [Handoff],
+    branch: Option<&str>,
+    cwd: &str,
+) -> Option<&'a Handoff> {
+    active.iter().find(|handoff| {
+        let on_branch = || branch.is_some_and(|branch| branch == handoff.branch);
+        let in_checkout = || !cwd.is_empty() && std::path::Path::new(&handoff.cwd).starts_with(cwd);
+        match (handoff.branch.is_empty(), handoff.cwd.is_empty()) {
+            (true, true) => false,
+            (false, true) => on_branch(),
+            (true, false) => in_checkout(),
+            (false, false) => on_branch() && in_checkout(),
+        }
+    })
+}

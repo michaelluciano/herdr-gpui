@@ -47,6 +47,8 @@ mod handoff_open;
 #[cfg(test)]
 mod handoffs;
 #[cfg(test)]
+mod handoffs_current;
+#[cfg(test)]
 mod handoffs_history;
 #[cfg(test)]
 mod host_agents;

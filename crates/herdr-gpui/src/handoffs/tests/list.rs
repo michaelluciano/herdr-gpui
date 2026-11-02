@@ -26,6 +26,8 @@ fn a_handoff_is_listed_with_its_front_matter() {
             parent: "P-claude-setup".into(),
             prev: String::new(),
             claimed_by: String::new(),
+            branch: String::new(),
+            cwd: String::new(),
         }]
     );
 }

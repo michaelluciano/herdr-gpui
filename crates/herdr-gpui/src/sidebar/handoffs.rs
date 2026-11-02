@@ -6,7 +6,7 @@ use super::{
 };
 use crate::{
     HerdrWindow,
-    handoffs::{Handoff, Shelf, detail, target_for},
+    handoffs::{Handoff, Shelf, current, detail, target_for},
     window::{Flash, chrome_focus::Region},
 };
 use gpui::{ClipboardItem, prelude::*, *};
@@ -39,18 +39,28 @@ impl HerdrWindow {
         cx: &mut Context<Self>,
     ) -> Option<Div> {
         let board = &self.handoffs.board;
-        if devices || (board.active.is_empty() && board.history.is_empty()) {
+        // Only the newest open handoff of the focused workspace's branch or
+        // checkout shows; the others wait until their workspace is focused.
+        let current = self
+            .live
+            .snapshot
+            .as_ref()
+            .and_then(|snapshot| snapshot.workspaces.iter().find(|space| space.focused))
+            .and_then(|space| {
+                current(
+                    &board.active,
+                    space.branch.as_deref(),
+                    &space.new_workspace_cwd,
+                )
+            });
+        if devices || (current.is_none() && board.history.is_empty()) {
             return None;
         }
         let font = &self.config.sidebar;
         let theme = &self.theme;
         let body = (!self.handoffs.collapsed).then(|| {
-            let active: Vec<_> = board
-                .active
-                .iter()
-                .enumerate()
-                .map(|(index, handoff)| self.row(("handoff-row", index), handoff, None, look, cx))
-                .collect();
+            let active =
+                current.map(|handoff| self.row(("handoff-row", 0), handoff, None, look, cx));
             let shelved: Vec<_> = if self.handoffs.history_open {
                 board
                     .history
@@ -84,7 +94,7 @@ impl HerdrWindow {
         });
         let count = div()
             .debug_selector(|| "handoffs-count".into())
-            .child(label_text(&board.active.len().to_string()));
+            .child(label_text(&usize::from(current.is_some()).to_string()));
         let right = div()
             .flex()
             .items_center()
