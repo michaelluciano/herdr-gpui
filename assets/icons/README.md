@@ -14,7 +14,7 @@ Transparent margins keep the artwork aligned with other desktop icons.
 
 `herdr-ui-icon-clean.svg` is the rounded tile source artwork;
 `herdr-icon-square-clean.svg` is the legacy full-square variant. It remains an
-input to `scripts/generate-icons.swift`, which regenerates its normal and red
+input to `scripts/generate-icons.swift`, which regenerates its normal and teal
 PNG exports; Linux packaging no longer installs those square assets.
 The rounded 1024x1024 PNG export serves the About box; Linux packages install
 `herdr-linux.svg`, a circular composition of the same ram, as the scalable icon.
@@ -62,12 +62,12 @@ rather than cropping the macOS composition. The circle is 896px across on a
 1024px canvas, with 64px margins.
 The desktop entry uses `Icon=herdr-gpui`; its filename and `StartupWMClass` match
 the app's `so.pen.herdr-gpui` identity for Wayland and X11 window association.
-Linked-worktree packages select the circular red `herdr-linux-worktree.svg`
+Linked-worktree packages select the circular teal `herdr-linux-worktree.svg`
 instead, installed at the same scalable icon path.
 
 Run `just icons-linux` on any platform to regenerate both Linux SVGs from the ram
 path and attribution in `herdr-ui-icon-clean.svg`. It needs only Python's standard
-library; the red palette matches the flat colors of the macOS worktree export.
+library; the teal palette matches the flat colors of the macOS worktree export.
 `just icons` also runs this generator before generating the macOS assets.
 
 This follows freedesktop icon lookup conventions used by GNOME, KDE Plasma, and
@@ -93,7 +93,7 @@ future artwork changes to come from package upgrades again, then refresh the cac
 ### Windows
 
 `Herdr.ico` holds the rounded tile at 16, 20, 24, 32, 40, 48, 64, and 256 px, each
-a PNG rendered from `herdr-ui-icon-clean.svg`. Linked-worktree builds use the red
+a PNG rendered from `herdr-ui-icon-clean.svg`. Linked-worktree builds use the teal
 `Herdr-worktree.ico`, with the palette of the Linux worktree SVG. The build script
 (`crates/herdr-gpui/windows_resource.rs`) embeds it in the executable as icon
 resource 1, the one GPUI loads for its windows, so Explorer, the window, and the
@@ -127,7 +127,7 @@ The flattened `.icns` icons follow Apple's
 | 1024 | 824 | 100 |
 
 The generator fits the source SVG's 896px rounded tile to these bounds before
-rasterizing. Both the normal and red worktree icons use the same margins,
+rasterizing. Both the normal and teal worktree icons use the same margins,
 including the embedded 1024px PNG used by the About box. The circular Linux
 artwork uses its own composition and margins instead of Apple's sizing.
 
@@ -151,7 +151,7 @@ highlights, translucency, and shadows are off, preserving the flat design.
 systems, under the icon name `Herdr` for both variants. Test the rendering with
 `NSWorkspace.icon(forFile:)` on a bundle, or in the Dock.
 
-The same generator uses CoreImage to map each rendered image's luminance to a red
+The same generator uses CoreImage to map each rendered image's luminance to a teal
 palette, retaining transparency, producing `herdr-worktree-1024.png`,
 `herdr-square-worktree-1024.png`, `Herdr-worktree.icns`, and
 `Herdr-worktree.car`; the catalog's two flat colors pass through the same mapping.

@@ -5,10 +5,10 @@ import xml.etree.ElementTree as ET
 
 ASSETS = Path(__file__).resolve().parents[1] / "assets/icons"
 SVG = "{http://www.w3.org/2000/svg}"
-# The red palette matches the flat colors of the macOS worktree PNG.
+# The teal palette matches the flat colors of the macOS worktree PNG.
 PALETTES = {
     "herdr-linux.svg": ("#f4f1e9", "#303438"),
-    "herdr-linux-worktree.svg": ("#ea6369", "#8e2b38"),
+    "herdr-linux-worktree.svg": ("#6ae1df", "#338b8c"),
 }
 
 

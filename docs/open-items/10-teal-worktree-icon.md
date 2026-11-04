@@ -1,6 +1,6 @@
 # Teal worktree icon
 
-Status: blocked on Xcode (tracked by a draft PR; no code yet)
+Status: teal PNGs, .icns, .ico and Linux SVG are in PR 17; only `Herdr-worktree.car` is still red, blocked on Xcode
 
 ## Goal
 
@@ -21,7 +21,7 @@ Make the icon of a worktree build a shade of teal instead of red. A normal build
 
 - `rsvg-convert` is installed (`brew install librsvg`, 2026-11-01).
 - Full Xcode 26 or later is not installed, so `xcrun actool` fails and `generate-icons.swift` stops (it needs `actool` for `Herdr-worktree.car`). After installing it, run `sudo xcode-select -s /Applications/Xcode.app`.
-- Without Xcode, the PNG, `.icns` (via `iconutil`) and `.ico` can be regenerated but the `.car` stays red, and `scripts/check-icons.swift` may then fail on the mismatch.
+- Without Xcode, the PNG, `.icns`, `.ico` and Linux SVG are regenerated in teal (done) but the `.car` stays red, and `scripts/check-icons.swift` may then fail on the mismatch. Until the `.car` is rebuilt, a macOS 26 Dock shows red for a fresh worktree build; the operator's installed `Herdr Dev.app` was patched by hand to use the teal `.icns` without the `.car`. A rebuild copies the repo's `.car`, which is still red.
 
 ## Where to start
 

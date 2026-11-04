@@ -15,12 +15,12 @@ ASSETS = Path(__file__).resolve().parents[1] / "assets/icons"
 SIZES = (16, 20, 24, 32, 40, 48, 64, 256)
 TILE_FILL = 'fill="#f4f1e9" />'
 RAM_FILL = 'fill="#303438" />'
-# The red palette matches the flat colors of the macOS worktree PNG.
+# The teal palette matches the flat colors of the macOS worktree PNG.
 VARIANTS = {
     "Herdr.ico": {},
     "Herdr-worktree.ico": {
-        TILE_FILL: 'fill="#ea6369" />',
-        RAM_FILL: 'fill="#8e2b38" />',
+        TILE_FILL: 'fill="#6ae1df" />',
+        RAM_FILL: 'fill="#338b8c" />',
     },
 }
 
