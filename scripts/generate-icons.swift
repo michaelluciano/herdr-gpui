@@ -46,16 +46,16 @@ func render(_ sourceName: String, pixels: Int, macOS: Bool) throws -> Data {
 let colorContext = CIContext()
 func worktreePNG(_ source: Data) -> Data {
   let image = NSBitmapImageRep(data: source)!.cgImage!
-  // Map luminance to a saturated red palette while retaining the original alpha
-  // and shading at this resolution.
+  // Map luminance to a saturated teal palette while retaining the original
+  // alpha and shading at this resolution.
   let red = CIImage(cgImage: image).applyingFilter(
     "CIColorMatrix",
     parameters: [
-      "inputRVector": CIVector(x: 0.1382, y: 0.4649, z: 0.0469, w: 0),
-      "inputGVector": CIVector(x: 0.0255, y: 0.0858, z: 0.0087, w: 0),
-      "inputBVector": CIVector(x: 0.0255, y: 0.0858, z: 0.0087, w: 0),
+      "inputRVector": CIVector(x: 0.0213, y: 0.0715, z: 0.0072, w: 0),
+      "inputGVector": CIVector(x: 0.1318, y: 0.4434, z: 0.0448, w: 0),
+      "inputBVector": CIVector(x: 0.1233, y: 0.4148, z: 0.0419, w: 0),
       "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
-      "inputBiasVector": CIVector(x: 0.25, y: 0.02, z: 0.035, w: 0),
+      "inputBiasVector": CIVector(x: 0.02, y: 0.17, z: 0.17, w: 0),
     ])
   guard let redImage = colorContext.createCGImage(red, from: red.extent) else {
     fatalError("Unable to generate the red worktree icon")
