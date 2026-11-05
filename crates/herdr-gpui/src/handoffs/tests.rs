@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 mod classify;
 mod dismissed;
+mod latest;
 mod line;
 mod list;
 mod newest;

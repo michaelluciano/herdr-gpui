@@ -74,14 +74,24 @@ pub(crate) fn classify(list: Vec<Handoff>) -> Board {
 /// Sorts `list`, as [`super::list::list_all`] returns it (newest first), into
 /// the board. Per project only the newest handoff can be active, and only
 /// while it is open and unclaimed; every older one is superseded. A handoff
-/// whose status is neither open nor picked up is hidden and does not count as
-/// the project's newest. A dismissed handoff still counts as its project's
+/// with status `superseded` goes to [`Shelf::Superseded`] and does not count
+/// as the newest. A handoff whose status is none of those is hidden and does
+/// not count as the project's newest. A dismissed handoff still counts as its project's
 /// newest, so the older ones stay superseded, but it goes to the history as
 /// [`Shelf::Dismissed`].
 pub(crate) fn classify_with(list: Vec<Handoff>, dismissed: &HashSet<PathBuf>) -> Board {
     let mut seen: HashSet<String> = HashSet::new();
     let mut board = Board::default();
     for handoff in list {
+        // A superseded handoff is an older version: shelved, and never the
+        // project's newest.
+        if handoff.status == "superseded" {
+            board.history.push(Shelved {
+                shelf: Shelf::Superseded,
+                handoff,
+            });
+            continue;
+        }
         let picked_up = match handoff.status.as_str() {
             "claimed" | "consumed" => true,
             // A claim on an open handoff picks it up; a claim on any other

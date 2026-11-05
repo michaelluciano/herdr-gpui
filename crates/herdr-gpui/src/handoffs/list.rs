@@ -30,7 +30,7 @@ const KEYS: [&str; 7] = [
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Handoff {
     pub(crate) path: PathBuf,
-    /// The directory name above `sessions`.
+    /// The project directory name above `LATEST.md`, `history` and `sessions`.
     pub(crate) project: String,
     /// The front matter `id`, else the file stem.
     pub(crate) id: String,
@@ -48,7 +48,8 @@ pub(crate) struct Handoff {
     pub(crate) modified: Option<std::time::SystemTime>,
 }
 
-/// Every `<root>/*/sessions/*.md` handoff with a `status` key, newest first.
+/// Every `<root>/*/LATEST.md`, `<root>/*/history/*.md` and
+/// `<root>/*/sessions/*.md` handoff with a `status` key, newest first.
 pub(crate) fn list_all(root: &Path) -> Vec<Handoff> {
     let mut found: Vec<Handoff> = entries(root, EntryKind::Dir)
         .into_iter()
@@ -57,14 +58,20 @@ pub(crate) fn list_all(root: &Path) -> Vec<Handoff> {
                 .file_name()
                 .map(|name| name.to_string_lossy().into_owned())
                 .unwrap_or_default();
-            // A symlinked `sessions` is not a directory to `file_type`.
-            let sessions = project.join("sessions");
-            let is_dir = std::fs::symlink_metadata(&sessions).is_ok_and(|m| m.is_dir());
-            let files = if is_dir {
-                entries(&sessions, EntryKind::File)
-            } else {
-                Vec::new()
-            };
+            // A symlinked `sessions` or `history` is not a directory to
+            // `file_type`.
+            let mut files = Vec::new();
+            for dir in ["sessions", "history"] {
+                let dir = project.join(dir);
+                if std::fs::symlink_metadata(&dir).is_ok_and(|m| m.is_dir()) {
+                    files.extend(entries(&dir, EntryKind::File));
+                }
+            }
+            // `LATEST.md` is the current handoff; a symlink is skipped.
+            let latest = project.join("LATEST.md");
+            if std::fs::symlink_metadata(&latest).is_ok_and(|m| m.is_file()) {
+                files.push(latest);
+            }
             files
                 .into_iter()
                 .filter(|file| file.extension().is_some_and(|ext| ext == "md"))
