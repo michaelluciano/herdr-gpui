@@ -11,6 +11,8 @@ use std::{
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
+mod glyph;
+
 struct Dir(PathBuf);
 
 impl Dir {

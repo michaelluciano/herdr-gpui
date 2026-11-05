@@ -104,6 +104,15 @@ impl<'a> WorkspaceRow<'a> {
     }
 }
 
+/// An activity label as a mark with what the words said beyond the state.
+pub(super) struct StatusIcon {
+    pub(super) glyph: crate::agent_activity::Glyph,
+    /// Tool name, subagent count and time; may be empty.
+    pub(super) detail: String,
+    /// The label in words, for the mark's tooltip.
+    pub(super) words: String,
+}
+
 pub(super) struct AgentRow<'a> {
     /// Stable probe key, unique across both lists.
     pub(super) key: String,
@@ -118,6 +127,9 @@ pub(super) struct AgentRow<'a> {
     pub(super) pane: Option<String>,
     /// Its tab's 1-based position in the workspace, when the snapshot lists it.
     pub(super) tab: Option<usize>,
+    /// The mark the default rows draw in place of the activity label's state
+    /// word, when the agent has one.
+    pub(super) status_icon: Option<StatusIcon>,
     /// The daemon's `state_text` word when its sidebar config asks for it, so
     /// the GUI and the TUI name the status the same way: the agent's own
     /// state label when its integration set one.

@@ -76,7 +76,14 @@ impl RowLayout for Herdr {
         let two_lines = agent.lines.is_empty() && !detail.is_empty();
         let line = two_lines.then(|| AgentLine {
             tab: agent.tab,
-            status: agent.status_text.as_deref(),
+            glyph: agent
+                .status_icon
+                .as_ref()
+                .map(|icon| (icon.glyph, icon.words.as_str())),
+            status: match &agent.status_icon {
+                Some(icon) => Some(icon.detail.as_str()).filter(|detail| !detail.is_empty()),
+                None => agent.status_text.as_deref(),
+            },
             status_color: agent
                 .status_color
                 .unwrap_or_else(|| cx.indicators.color(agent.status)),

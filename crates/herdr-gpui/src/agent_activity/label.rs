@@ -1,6 +1,7 @@
 //! What a Claude agent's row says it is doing: a per-pane report from Claude
 //! Code's hooks, checked against the daemon's own status.
 
+use super::glyph::{Glyph, tool_glyph, tool_name};
 use herdr_client::protocol::AgentStatus;
 
 /// A report older than this while the daemon says working means a hook
@@ -48,14 +49,23 @@ pub(crate) enum Tone {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Label {
+    /// The whole label in words: what a screen reader, a custom row and the
+    /// one-line rows read.
     pub(crate) text: String,
     pub(crate) tone: Tone,
+    /// The mark that replaces the state's word in the default rows.
+    pub(crate) glyph: Glyph,
+    /// What the words said beyond the state, kept beside the mark: the tool
+    /// name where the mark says little, the subagent count, the time.
+    pub(crate) detail: String,
 }
 
-fn label(text: impl Into<String>, tone: Tone) -> Label {
+fn label(text: impl Into<String>, tone: Tone, glyph: Glyph, detail: impl Into<String>) -> Label {
     Label {
         text: text.into(),
         tone,
+        glyph,
+        detail: detail.into(),
     }
 }
 
@@ -81,10 +91,10 @@ fn waiting_elapsed(age: u64) -> String {
 /// The words for the daemon's status alone.
 fn from_daemon(status: AgentStatus) -> Option<Label> {
     Some(match status {
-        AgentStatus::Working => label("working", Tone::Working),
-        AgentStatus::Blocked => label("waiting on you", Tone::Blocked),
-        AgentStatus::Done => label("waiting on you", Tone::Waiting),
-        AgentStatus::Idle => label("idle", Tone::Muted),
+        AgentStatus::Working => label("working", Tone::Working, Glyph::Hammer, ""),
+        AgentStatus::Blocked => label("waiting on you", Tone::Blocked, Glyph::Blocked, ""),
+        AgentStatus::Done => label("waiting on you", Tone::Waiting, Glyph::Waiting, ""),
+        AgentStatus::Idle => label("idle", Tone::Muted, Glyph::Sleep, ""),
         AgentStatus::Unknown => return None,
     })
 }
@@ -110,26 +120,52 @@ pub(crate) fn activity_label(
     }
     let since = elapsed(age);
     Some(match report.state {
-        ReportState::Thinking => label(format!("thinking · {since}"), Tone::Working),
-        ReportState::Working if report.tool.is_empty() => {
-            label(format!("working · {since}"), Tone::Working)
-        }
-        ReportState::Working => label(
-            format!("working · {} · {since}", report.tool),
+        ReportState::Thinking => label(
+            format!("thinking · {since}"),
             Tone::Working,
+            Glyph::Brain,
+            since,
         ),
-        ReportState::Subagents => {
-            let text = match report.subagents {
-                0 => "subagents".to_owned(),
-                n => format!("subagents ×{n}"),
+        ReportState::Working if report.tool.is_empty() => label(
+            format!("working · {since}"),
+            Tone::Working,
+            Glyph::Hammer,
+            since,
+        ),
+        ReportState::Working => {
+            let detail = match tool_name(&report.tool) {
+                Some(name) => format!("{name} · {since}"),
+                None => since,
             };
-            label(format!("{text} · {since}"), Tone::Subagents)
+            label(
+                format!("working · {} · {}", report.tool, elapsed(age)),
+                Tone::Working,
+                tool_glyph(&report.tool),
+                detail,
+            )
         }
-        ReportState::Waiting if age > IDLE_AFTER => label("idle", Tone::Muted),
-        ReportState::Waiting => label(
-            format!("waiting on you · {}", waiting_elapsed(age)),
-            Tone::Waiting,
-        ),
+        ReportState::Subagents => {
+            let (text, count) = match report.subagents {
+                0 => ("subagents".to_owned(), String::new()),
+                n => (format!("subagents ×{n}"), format!("×{n} · ")),
+            };
+            label(
+                format!("{text} · {since}"),
+                Tone::Subagents,
+                Glyph::Subagents,
+                format!("{count}{since}"),
+            )
+        }
+        ReportState::Waiting if age > IDLE_AFTER => label("idle", Tone::Muted, Glyph::Sleep, ""),
+        ReportState::Waiting => {
+            let waited = waiting_elapsed(age);
+            label(
+                format!("waiting on you · {waited}"),
+                Tone::Waiting,
+                Glyph::Waiting,
+                waited,
+            )
+        }
     })
 }
 

@@ -666,7 +666,7 @@ pub(super) fn row(
                                     icon,
                                     parts,
                                     detail_limit,
-                                    (font, detail_color),
+                                    (font, theme, detail_color),
                                 ));
                             }
                             let detail_x =
