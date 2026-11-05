@@ -9,6 +9,8 @@ use std::{
 
 /// A file longer than this is not a report.
 const MAX_BYTES: u64 = 2048;
+/// The longest session directory kept, in bytes.
+const CWD_LIMIT: usize = 1024;
 /// The longest tool name shown.
 const TOOL_LIMIT: usize = 32;
 
@@ -62,11 +64,21 @@ pub(crate) fn parse(text: &str) -> Option<Report> {
                 .to_owned()
         })
         .unwrap_or_default();
+    let cwd = value
+        .get("cwd")
+        .and_then(serde_json::Value::as_str)
+        .filter(|cwd| {
+            cwd.len() <= CWD_LIMIT
+                && Path::new(cwd).is_absolute()
+                && !cwd.chars().any(char::is_control)
+        })
+        .map(str::to_owned);
     Some(Report {
         state,
         since,
         subagents,
         tool,
+        cwd,
     })
 }
 
@@ -129,6 +141,31 @@ mod tests {
         );
         let bare = parse(r#"{"state":"waiting","since":1}"#).unwrap();
         assert_eq!((bare.subagents, bare.tool.as_str()), (0, ""));
+    }
+
+    #[test]
+    fn the_session_directory_is_kept_only_when_absolute_and_clean() {
+        let cwd = |value: &str| {
+            parse(&format!(
+                r#"{{"state":"waiting","since":1,"cwd":{}}}"#,
+                serde_json::to_string(value).unwrap()
+            ))
+            .unwrap()
+            .cwd
+        };
+        assert_eq!(cwd("/Users/me/kb"), Some("/Users/me/kb".into()));
+        assert_eq!(cwd("/a \"q\"/b\\c"), Some("/a \"q\"/b\\c".into()));
+        for bad in ["", "relative/dir", "/a/b\nc", "/a/\u{7}b"] {
+            assert_eq!(cwd(bad), None, "{bad:?}");
+        }
+        assert_eq!(cwd(&format!("/{}", "a".repeat(1024))), None);
+        assert_eq!(
+            parse(r#"{"state":"waiting","since":1,"cwd":7}"#)
+                .unwrap()
+                .cwd,
+            None
+        );
+        assert_eq!(parse(r#"{"state":"waiting","since":1}"#).unwrap().cwd, None);
     }
 
     #[test]

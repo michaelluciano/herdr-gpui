@@ -49,6 +49,28 @@ fn epoch_now() -> u64 {
 }
 
 impl AgentActivity {
+    /// The directory the Claude session in `pane_id` works in, from its
+    /// report, which exists only for a local Claude pane.
+    pub(crate) fn session_cwd(&self, pane_id: &str) -> Option<&str> {
+        self.reports.get(pane_id)?.cwd.as_deref()
+    }
+
+    /// Gives `pane_id` a report that names `cwd`.
+    #[cfg(test)]
+    pub(crate) fn set_test_cwd(&mut self, pane_id: &str, cwd: &str) {
+        use super::label::ReportState;
+        self.reports.insert(
+            pane_id.to_owned(),
+            Report {
+                state: ReportState::Working,
+                since: 0,
+                subagents: 0,
+                tool: String::new(),
+                cwd: Some(cwd.to_owned()),
+            },
+        );
+    }
+
     fn labels(
         &self,
         panes: &[(String, AgentStatus)],

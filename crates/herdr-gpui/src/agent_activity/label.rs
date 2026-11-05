@@ -26,6 +26,9 @@ pub(crate) struct Report {
     pub(crate) since: u64,
     pub(crate) subagents: u32,
     pub(crate) tool: String,
+    /// The directory the Claude session works in, which its own process may
+    /// not be in; absolute, or `None` when the report names none.
+    pub(crate) cwd: Option<String>,
 }
 
 /// Which theme color a label takes.
@@ -143,6 +146,7 @@ mod tests {
             since: NOW - age,
             subagents: 0,
             tool: String::new(),
+            cwd: None,
         }
     }
 
