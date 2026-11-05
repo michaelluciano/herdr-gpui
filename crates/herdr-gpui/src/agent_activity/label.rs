@@ -65,6 +65,16 @@ fn elapsed(seconds: u64) -> String {
     }
 }
 
+/// How long a waiting report has waited, without counting seconds on screen:
+/// `<1m`, whole minutes to 4m, then steps of five minutes.
+fn waiting_elapsed(age: u64) -> String {
+    match age {
+        0..=59 => "<1m".to_owned(),
+        60..=299 => format!("{}m", age / 60),
+        _ => format!("{}m", age / 300 * 5),
+    }
+}
+
 /// The words for the daemon's status alone.
 fn from_daemon(status: AgentStatus) -> Option<Label> {
     Some(match status {
@@ -113,7 +123,10 @@ pub(crate) fn activity_label(
             label(format!("{text} · {since}"), Tone::Subagents)
         }
         ReportState::Waiting if age > IDLE_AFTER => label("idle", Tone::Muted),
-        ReportState::Waiting => label(format!("waiting on you · {since}"), Tone::Waiting),
+        ReportState::Waiting => label(
+            format!("waiting on you · {}", waiting_elapsed(age)),
+            Tone::Waiting,
+        ),
     })
 }
 
@@ -163,7 +176,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             (l.text.as_str(), l.tone),
-            ("waiting on you · 5s", Tone::Waiting)
+            ("waiting on you · <1m", Tone::Waiting)
         );
     }
 
@@ -177,6 +190,29 @@ mod tests {
             text(Some(&r), AgentStatus::Idle).unwrap(),
             "waiting on you · 10m"
         );
+    }
+
+    #[test]
+    fn a_waiting_label_steps_by_minutes_then_five_minutes() {
+        let table = [
+            (0, "<1m"),
+            (59, "<1m"),
+            (60, "1m"),
+            (119, "1m"),
+            (120, "2m"),
+            (299, "4m"),
+            (300, "5m"),
+            (599, "5m"),
+            (600, "10m"),
+        ];
+        for (age, words) in table {
+            let r = report(ReportState::Waiting, age);
+            assert_eq!(
+                text(Some(&r), AgentStatus::Done).unwrap(),
+                format!("waiting on you · {words}"),
+                "age {age}"
+            );
+        }
     }
 
     #[test]
