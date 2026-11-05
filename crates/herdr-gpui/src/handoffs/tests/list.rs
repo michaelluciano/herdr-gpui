@@ -26,6 +26,7 @@ fn a_handoff_is_listed_with_its_front_matter() {
             parent: "P-claude-setup".into(),
             prev: String::new(),
             claimed_by: String::new(),
+            modified: list[0].modified,
         }]
     );
 }
@@ -288,4 +289,13 @@ fn colons_in_values_and_unknown_keys_do_not_confuse_the_parse() {
     let list = list_all(root.path());
     assert_eq!(ids(&list), ["S-1: first"]);
     assert_eq!(list[0].session_id, "pending (a: b)");
+}
+
+#[test]
+fn a_listed_handoff_carries_its_files_modified_time() {
+    let root = Root::new("mtime");
+    let path = root.session("kb", "a.md", open_header("a", "2026-10-01"));
+    let expected = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let list = list_all(root.path());
+    assert_eq!(list[0].modified, Some(expected));
 }

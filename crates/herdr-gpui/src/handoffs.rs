@@ -17,7 +17,7 @@ mod tests;
 pub(crate) use classify::Shelf;
 #[cfg(test)]
 pub(crate) use classify::classify;
-pub(crate) use line::detail;
+pub(crate) use line::{detail, edited_label};
 pub(crate) use list::Handoff;
 #[cfg(test)]
 pub(crate) use list::list_all;

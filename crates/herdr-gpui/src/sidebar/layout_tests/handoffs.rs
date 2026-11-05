@@ -16,6 +16,7 @@ pub(super) fn handoff(id: &str, project: &str, created: &str) -> Handoff {
         parent: String::new(),
         prev: String::new(),
         claimed_by: String::new(),
+        modified: None,
     }
 }
 

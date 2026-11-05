@@ -2,7 +2,8 @@
 //! why a history row is there.
 
 use super::{classify::Shelf, list::Handoff};
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike, Utc};
+use std::time::SystemTime;
 
 /// When a handoff was written: a local date and time, or a date alone.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -127,11 +128,75 @@ pub(crate) fn age(created: &str, now: NaiveDateTime) -> Option<String> {
     }
 }
 
-/// The second line of a row: the short id, then the age when `created`
-/// parses, then the reason a history row is there.
+/// `modified` as a wall-clock time in `zone`, never later than `now`.
+fn local_time<Tz: TimeZone>(modified: SystemTime, now: NaiveDateTime, zone: &Tz) -> NaiveDateTime {
+    let then = DateTime::<Utc>::from(modified)
+        .with_timezone(zone)
+        .naive_local();
+    then.min(now)
+}
+
+/// How long ago `then` was in whole minutes: `now`, `5m`, `3h`, `2d`.
+fn age_since(then: NaiveDateTime, now: NaiveDateTime) -> String {
+    let minutes = (now - then).num_minutes();
+    if minutes < 1 {
+        "now".into()
+    } else if minutes < 60 {
+        format!("{minutes}m")
+    } else if minutes < 60 * 24 {
+        format!("{}h", minutes / 60)
+    } else {
+        format!("{}d", minutes / (60 * 24))
+    }
+}
+
+/// When a file was last edited, as a person would say it: a clock time
+/// today (`9:15 PM`), `yesterday`, `Nov 3` this year, `Nov 3 2025` before.
+/// `now` is the wall-clock time in `zone`, so the clock is the caller's; a
+/// time ahead of it reads as now.
+pub(crate) fn edited<Tz: TimeZone>(modified: SystemTime, now: NaiveDateTime, zone: &Tz) -> String {
+    let then = local_time(modified, now, zone);
+    let days = (now.date() - then.date()).num_days();
+    match days {
+        0 => {
+            let (pm, hour) = then.hour12();
+            format!(
+                "{hour}:{:02} {}",
+                then.minute(),
+                if pm { "PM" } else { "AM" }
+            )
+        }
+        1 => "yesterday".into(),
+        _ if then.year() == now.year() => then.format("%b %-d").to_string(),
+        _ => then.format("%b %-d %Y").to_string(),
+    }
+}
+
+/// The second line of a row, at the machine's local time.
 pub(crate) fn detail(handoff: &Handoff, shelf: Option<Shelf>, now: NaiveDateTime) -> String {
+    detail_in(handoff, shelf, now, &Local)
+}
+
+/// The edit time of a row at the machine's local time, `None` when unknown.
+pub(crate) fn edited_label(handoff: &Handoff, now: NaiveDateTime) -> Option<String> {
+    Some(edited(handoff.modified?, now, &Local))
+}
+
+/// The second line of a row: the short id, then the age, then the reason a
+/// history row is there. The age counts from the file's last edit in `zone`
+/// and falls back to `created` when the edit time is unknown.
+pub(crate) fn detail_in<Tz: TimeZone>(
+    handoff: &Handoff,
+    shelf: Option<Shelf>,
+    now: NaiveDateTime,
+    zone: &Tz,
+) -> String {
     let mut line = short_id(&handoff.id);
-    if let Some(age) = age(&handoff.created, now) {
+    let age = match handoff.modified {
+        Some(modified) => Some(age_since(local_time(modified, now, zone), now)),
+        None => age(&handoff.created, now),
+    };
+    if let Some(age) = age {
         line.push_str(" \u{b7} ");
         line.push_str(&age);
     }

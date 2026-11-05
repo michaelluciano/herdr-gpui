@@ -44,6 +44,8 @@ pub(crate) struct Handoff {
     pub(crate) prev: String,
     /// Who claimed the handoff, empty when unclaimed.
     pub(crate) claimed_by: String,
+    /// When the file was last written, `None` when the system will not say.
+    pub(crate) modified: Option<std::time::SystemTime>,
 }
 
 /// Every `<root>/*/sessions/*.md` handoff with a `status` key, newest first.
@@ -167,7 +169,11 @@ fn read_handoff(path: PathBuf, project: &str) -> Option<Handoff> {
         id if !id.is_empty() => id,
         _ => cut(&path.file_stem()?.to_string_lossy()),
     };
+    let modified = std::fs::metadata(&path)
+        .and_then(|metadata| metadata.modified())
+        .ok();
     Some(Handoff {
+        modified,
         project: project.to_owned(),
         id,
         created: value("created"),

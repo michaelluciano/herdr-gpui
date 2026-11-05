@@ -88,3 +88,14 @@ fn the_all_toggle_is_white_while_it_shows_all_and_gray_while_it_does_not() {
         }
     }
 }
+
+#[test]
+fn the_edit_time_gray_keeps_three_to_one_on_every_row_background() {
+    for theme in themes() {
+        let ink = super::super::handoffs::edited_ink(&theme);
+        for background in [theme.background, theme.tokens().rail] {
+            let seen = ratio(ink, background);
+            assert!(seen >= 3.0, "edited {seen} on {background:x}");
+        }
+    }
+}

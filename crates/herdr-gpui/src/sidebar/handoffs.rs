@@ -9,7 +9,7 @@ use super::{
 use crate::{
     HerdrWindow,
     config::{Theme, mix},
-    handoffs::{Handoff, Shelf, detail, target_for},
+    handoffs::{Handoff, Shelf, detail, edited_label, target_for},
     window::{Flash, chrome_focus::Region},
 };
 use gpui::{ClipboardItem, prelude::*, *};
@@ -43,9 +43,23 @@ pub(super) fn toggle_ink(theme: &Theme, open: bool) -> u32 {
     if open {
         return theme.foreground;
     }
+    quiet_ink(theme)
+}
+
+/// The muted gray, nudged in lightness only where a theme's falls under
+/// [`LOCK_CONTRAST`] on the sidebar.
+fn quiet_ink(theme: &Theme) -> u32 {
     let rail = theme.tokens().rail;
     crate::contrast::ink(theme.muted, &[theme.background, rail], LOCK_CONTRAST)
 }
+
+/// The colour of a row's last-edit time.
+pub(super) fn edited_ink(theme: &Theme) -> u32 {
+    quiet_ink(theme)
+}
+
+/// The edit time's size against the row text.
+const EDITED_SCALE: f32 = 0.82;
 
 /// Extra vertical padding of a row, for a little room between rows.
 const ROW_GAP: f32 = 2.;
@@ -353,10 +367,26 @@ impl HerdrWindow {
         let pinned = self.handoffs.pinned.contains(&path);
         let target = target_for(handoff);
         let colors = row_colors(theme, shelf);
-        let aria = match shelf {
+        let now = chrono::Local::now().naive_local();
+        let edited = edited_label(handoff, now);
+        let mut aria = match shelf {
             None => format!("Copy path of handoff {}", handoff.id),
             Some(shelf) => format!("Copy path of {} handoff {}", shelf.label(), handoff.id),
         };
+        if let Some(edited) = &edited {
+            aria.push_str(&format!(", edited {edited}"));
+        }
+        let edited = edited.map(|text| {
+            // Leftover width only: the project name keeps its own first.
+            div()
+                .debug_selector(|| format!("{prefix}-edited-{index}"))
+                .flex_1()
+                .min_w_0()
+                .truncate()
+                .text_size(px(self.config.sidebar.size * EDITED_SCALE))
+                .text_color(rgb(edited_ink(theme)))
+                .child(label_text(&text))
+        });
         let (glyph, pin_aria) = if pinned {
             (LOCK_CLOSED, format!("Unpin handoff {}", handoff.id))
         } else {
@@ -417,49 +447,62 @@ impl HerdrWindow {
             }))
             .child(label_text("\u{d7}"));
         let remove = self.chrome_stop(Region::Sidebar, remove);
-        let row =
-            div()
-                .id(slot)
-                .group(group)
-                .debug_selector(|| format!("{prefix}-{index}"))
-                .role(Role::Button)
-                .aria_label(aria)
-                .flex_none()
-                .min_w_0()
-                .px(px(look.content_x()))
-                .py(px(look.row_padding() + ROW_GAP))
-                .cursor_pointer()
-                .hover(|row| row.bg(rgba(crate::panel_resize::RESIZE_HOVER)))
-                .on_click(cx.listener(move |this, _, _, cx| {
-                    this.copy_handoff_path(&path, cx);
-                }))
-                .on_mouse_down(
-                    MouseButton::Right,
-                    cx.listener(move |this, _: &MouseDownEvent, window, cx| {
-                        cx.stop_propagation();
-                        this.open_code_view(&target, window, cx);
-                    }),
-                )
-                .flex()
-                .items_center()
-                .gap_1()
-                .child(pin)
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w_0()
-                        .child(
-                            div()
-                                .truncate()
-                                .font_weight(FontWeight::SEMIBOLD)
-                                .text_color(rgb(colors.id_text))
-                                .child(label_text(&handoff.project)),
-                        )
-                        .child(div().truncate().text_color(rgb(colors.detail_text)).child(
-                            label_text(&detail(handoff, shelf, chrono::Local::now().naive_local())),
-                        )),
-                )
-                .child(remove);
+        let row = div()
+            .id(slot)
+            .group(group)
+            .debug_selector(|| format!("{prefix}-{index}"))
+            .role(Role::Button)
+            .aria_label(aria)
+            .flex_none()
+            .min_w_0()
+            .px(px(look.content_x()))
+            .py(px(look.row_padding() + ROW_GAP))
+            .cursor_pointer()
+            .hover(|row| row.bg(rgba(crate::panel_resize::RESIZE_HOVER)))
+            .on_click(cx.listener(move |this, _, _, cx| {
+                this.copy_handoff_path(&path, cx);
+            }))
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(move |this, _: &MouseDownEvent, window, cx| {
+                    cx.stop_propagation();
+                    this.open_code_view(&target, window, cx);
+                }),
+            )
+            .flex()
+            .items_center()
+            .gap_1()
+            .child(pin)
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_1()
+                            .min_w_0()
+                            .child(
+                                div()
+                                    .debug_selector(|| format!("{prefix}-project-{index}"))
+                                    .flex_none()
+                                    .max_w(relative(1.))
+                                    .truncate()
+                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .text_color(rgb(colors.id_text))
+                                    .child(label_text(&handoff.project)),
+                            )
+                            .children(edited),
+                    )
+                    .child(
+                        div()
+                            .truncate()
+                            .text_color(rgb(colors.detail_text))
+                            .child(label_text(&detail(handoff, shelf, now))),
+                    ),
+            )
+            .child(remove);
         self.chrome_stop(Region::Sidebar, row)
     }
 }

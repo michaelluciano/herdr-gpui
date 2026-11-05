@@ -39,6 +39,7 @@ pub(super) fn fixture(id: &str, project: &str, created: &str, status: &str) -> H
         parent: String::new(),
         prev: String::new(),
         claimed_by: String::new(),
+        modified: None,
     }
 }
 

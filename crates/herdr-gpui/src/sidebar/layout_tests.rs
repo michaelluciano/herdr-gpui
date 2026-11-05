@@ -52,6 +52,7 @@ mod handoffs;
 mod handoffs_colors;
 #[cfg(test)]
 mod handoffs_dismiss;
+mod handoffs_edited;
 #[cfg(test)]
 mod handoffs_history;
 #[cfg(test)]
