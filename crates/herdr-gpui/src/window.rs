@@ -219,6 +219,8 @@ pub(crate) struct HerdrWindow {
     pub(crate) gui_config_diagnostic: crate::config_diagnostic::ConfigDiagnostic,
     /// The open session handoffs the sidebar lists, and when they were read.
     pub(crate) handoffs: crate::handoffs::Handoffs,
+    /// What each local Claude agent is doing, from its hooks' state files.
+    pub(crate) agent_activity: crate::agent_activity::AgentActivity,
     pub(crate) held_keys: crate::terminal::HeldKeys,
     /// The sidebar row the pointer is resting on, waiting to open its menu.
     pub(crate) hover: Option<sidebar::HoverRest>,
@@ -681,6 +683,7 @@ impl HerdrWindow {
         self.poll_devices_overview(cx);
         self.poll_graphs(cx);
         self.poll_handoffs(cx);
+        self.poll_agent_activity(cx);
         self.poll_llm_launchers(cx);
         self.poll_llm_terminal(cx);
         self.poll_overview(cx);

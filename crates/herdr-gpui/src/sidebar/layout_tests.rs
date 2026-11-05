@@ -19,6 +19,8 @@ use herdr_client::{ConnectOptions, ConnectTarget};
 use std::sync::Arc;
 
 #[cfg(test)]
+mod agent_activity_row;
+#[cfg(test)]
 mod agent_menu;
 #[cfg(test)]
 mod agent_rows;
@@ -625,6 +627,7 @@ pub(crate) fn fixture_window(window: &mut Window, cx: &mut Context<HerdrWindow>)
         graph_scroll: Default::default(),
         graphs: Default::default(),
         handoffs: Default::default(),
+        agent_activity: Default::default(),
         llm_launch: Default::default(),
         deliveries: Default::default(),
         terminal_notes: Default::default(),

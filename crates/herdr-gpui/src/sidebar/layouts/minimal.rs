@@ -222,7 +222,9 @@ impl RowLayout for Minimal {
                 line.keep(
                     div()
                         .debug_selector(|| format!("status-{}", agent.key))
-                        .text_color(rgb(cx.indicators.color(agent.status))),
+                        .text_color(rgb(agent
+                            .status_color
+                            .unwrap_or_else(|| cx.indicators.color(agent.status)))),
                     text,
                     parts::glyph_at(font, font.size),
                     0.3,

@@ -386,7 +386,9 @@ impl RowLayout for Orca {
                 line.keep(
                     div()
                         .debug_selector(|| format!("status-{key}"))
-                        .text_color(rgb(cx.indicators.color(agent.status))),
+                        .text_color(rgb(agent
+                            .status_color
+                            .unwrap_or_else(|| cx.indicators.color(agent.status)))),
                     text,
                     glyph_at(font, font.size),
                     0.3,

@@ -120,6 +120,8 @@ pub(super) struct AgentRow<'a> {
     /// the GUI and the TUI name the status the same way: the agent's own
     /// state label when its integration set one.
     pub(super) status_text: Option<Cow<'a, str>>,
+    /// The status word's own color when it is a Claude activity label.
+    pub(super) status_color: Option<u32>,
     /// Daemon token rows, painted in the layout's own frame. Empty keeps its native lines.
     pub(super) lines: Vec<Vec<super::tokens::ResolvedToken>>,
 }

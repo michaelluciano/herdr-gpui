@@ -198,6 +198,7 @@ impl HerdrWindow {
             graphs: Default::default(),
             gui_config_diagnostic,
             handoffs: Default::default(),
+            agent_activity: Default::default(),
             held_keys: Default::default(),
             hover: None,
             hover_menu: None,

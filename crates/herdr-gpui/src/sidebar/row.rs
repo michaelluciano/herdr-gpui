@@ -421,6 +421,8 @@ pub(super) fn row(
     // sidebar config names it. Painted at the row's trailing edge in the dot's
     // color so a status reads at a glance, not only by hue.
     status_text: Option<&str>,
+    // Overrides the status word's color, which is the dot's otherwise.
+    status_word_color: Option<u32>,
     lines: &[Vec<ResolvedToken>],
     cx: &RowContext<'_>,
 ) -> Div {
@@ -712,7 +714,7 @@ pub(super) fn row(
                     .flex()
                     .items_center()
                     .overflow_hidden()
-                    .text_color(rgb(status_color))
+                    .text_color(rgb(status_word_color.unwrap_or(status_color)))
                     .child(div().w(px(status_width)).truncate().child(label_text(text))),
             )
         })

@@ -3,6 +3,7 @@
 
 use crate::{
     HerdrWindow, NavigationTarget,
+    agent_activity::Tone,
     sidebar::{
         Indicators, agent_name,
         agents::{agent_place, pane_name, state_label, status_text},
@@ -12,7 +13,7 @@ use crate::{
     },
 };
 use gpui::{prelude::*, *};
-use herdr_client::protocol::{ClientShellAgent, ClientShellSnapshot};
+use herdr_client::protocol::{AgentStatus, ClientShellAgent, ClientShellSnapshot};
 
 impl HerdrWindow {
     /// Appends a row for each agent `panel_agents` lists, in that order, and
@@ -135,7 +136,18 @@ impl HerdrWindow {
         let name = agent_name(agent);
         let pane = pane_name(agent, snapshot, name);
         let place = (!nested).then(|| agent_place(agent, snapshot)).flatten();
-        let state = state_label(agent, status_text(agent.agent_status));
+        let activity = self.agent_activity_label(agent);
+        let state = activity.as_ref().map_or_else(
+            || state_label(agent, status_text(agent.agent_status)),
+            |label| label.text.as_str().into(),
+        );
+        let status_color = activity.as_ref().map(|label| match label.tone {
+            Tone::Working => row_cx.indicators.color(AgentStatus::Working),
+            Tone::Waiting => row_cx.indicators.color(AgentStatus::Done),
+            Tone::Blocked => row_cx.indicators.color(AgentStatus::Blocked),
+            Tone::Muted => row_cx.indicators.color(AgentStatus::Idle),
+            Tone::Subagents => row_cx.theme.ink(row_cx.theme.tokens().accent),
+        });
         let spoken = crate::sidebar::accessibility::agent_name(
             name,
             pane.as_deref(),
@@ -152,12 +164,16 @@ impl HerdrWindow {
                 status: agent.agent_status,
                 place,
                 pane,
-                status_text: self
-                    .config
-                    .sidebar_layout
-                    .agents
-                    .shows_status_text(agent.agent.as_deref())
-                    .then_some(state),
+                // A Claude agent's activity label shows whatever the rows
+                // configure, as it replaces nothing a layout asked for.
+                status_text: (activity.is_some()
+                    || self
+                        .config
+                        .sidebar_layout
+                        .agents
+                        .shows_status_text(agent.agent.as_deref()))
+                .then_some(state),
+                status_color,
                 lines,
             }),
             row_cx,

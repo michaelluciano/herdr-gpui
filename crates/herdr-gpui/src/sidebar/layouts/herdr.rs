@@ -56,6 +56,7 @@ impl RowLayout for Herdr {
             badge,
             upstream,
             None,
+            None,
             &lines,
             cx,
         )
@@ -84,6 +85,7 @@ impl RowLayout for Herdr {
             None,
             None,
             agent.status_text.as_deref(),
+            agent.status_color,
             &agent.lines,
             cx,
         )
