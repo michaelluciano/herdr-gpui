@@ -13,8 +13,10 @@ mod target;
 mod tests;
 
 pub(crate) use classify::{Shelf, classify};
-pub(crate) use line::detail;
+pub(crate) use line::{detail, title};
 pub(crate) use list::Handoff;
+#[cfg(test)]
+pub(crate) use list::Kind;
 #[cfg(test)]
 pub(crate) use list::list_all;
 pub(crate) use poll::Handoffs;

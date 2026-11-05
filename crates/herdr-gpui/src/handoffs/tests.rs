@@ -5,6 +5,7 @@ use super::*;
 use std::path::{Path, PathBuf};
 
 mod classify;
+mod latest;
 mod line;
 mod list;
 mod poll;
@@ -36,6 +37,8 @@ pub(super) fn fixture(id: &str, project: &str, created: &str, status: &str) -> H
         parent: String::new(),
         prev: String::new(),
         claimed_by: String::new(),
+        kind: Kind::Legacy,
+        summary: String::new(),
     }
 }
 

@@ -6,7 +6,7 @@ use super::{
 };
 use crate::{
     HerdrWindow,
-    handoffs::{Handoff, Shelf, detail, target_for},
+    handoffs::{Handoff, Shelf, detail, target_for, title},
     window::{Flash, chrome_focus::Region},
 };
 use gpui::{ClipboardItem, prelude::*, *};
@@ -203,9 +203,10 @@ impl HerdrWindow {
             None => theme.subtext(),
             Some(_) => theme.muted,
         };
+        let name = title(handoff);
         let aria = match shelf {
-            None => format!("Copy path of handoff {}", handoff.id),
-            Some(shelf) => format!("Copy path of {} handoff {}", shelf.label(), handoff.id),
+            None => format!("Copy path of handoff {name}"),
+            Some(shelf) => format!("Copy path of {} handoff {name}", shelf.label()),
         };
         let row = div()
             .id(slot)
@@ -232,7 +233,7 @@ impl HerdrWindow {
                 div()
                     .truncate()
                     .text_color(rgb(id_color))
-                    .child(label_text(&handoff.id)),
+                    .child(label_text(name)),
             )
             .child(
                 div()

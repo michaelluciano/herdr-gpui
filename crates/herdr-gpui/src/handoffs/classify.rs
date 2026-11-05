@@ -1,6 +1,6 @@
 //! Sorts the loaded handoffs into the active list and the history.
 
-use super::list::Handoff;
+use super::list::{Handoff, Kind};
 
 /// Why a handoff is in the history instead of the active list.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -61,15 +61,33 @@ pub(crate) fn classify(list: Vec<Handoff>) -> Board {
 
 fn fate(index: usize, list: &[Handoff]) -> Fate {
     let handoff = &list[index];
+    if handoff.kind == Kind::History {
+        return match handoff.status.as_str() {
+            "claimed" | "consumed" => Fate::Shelved(Shelf::PickedUp),
+            _ => Fate::Shelved(Shelf::Superseded),
+        };
+    }
     match handoff.status.as_str() {
         "claimed" | "consumed" => Fate::Shelved(Shelf::PickedUp),
         // A claim on an open handoff picks it up; a claim on any other
         // status means nothing to the sidebar.
         "open" if !handoff.claimed_by.is_empty() => Fate::Shelved(Shelf::PickedUp),
-        "open" if superseded(index, list) => Fate::Shelved(Shelf::Superseded),
+        "open" if shadowed(index, list) || superseded(index, list) => {
+            Fate::Shelved(Shelf::Superseded)
+        }
         "open" => Fate::Active,
         _ => Fate::Hidden,
     }
+}
+
+/// Whether this is a legacy handoff of a project that has a `LATEST.md`,
+/// which is then the project's one active row.
+fn shadowed(index: usize, list: &[Handoff]) -> bool {
+    let handoff = &list[index];
+    handoff.kind == Kind::Legacy
+        && list
+            .iter()
+            .any(|other| other.kind == Kind::Latest && other.project == handoff.project)
 }
 
 /// Whether another handoff of the same project names this one as `prev`, or

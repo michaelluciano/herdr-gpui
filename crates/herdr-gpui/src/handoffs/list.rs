@@ -26,6 +26,17 @@ const KEYS: [&str; 7] = [
     "claimed_by",
 ];
 
+/// Where a handoff file sits in its project directory.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Kind {
+    /// `<project>/LATEST.md`, the one current handoff of a project.
+    Latest,
+    /// `<project>/history/*.md`, an older version of the project's handoff.
+    History,
+    /// `<project>/sessions/*.md`, the layout before `LATEST.md`.
+    Legacy,
+}
+
 /// One session handoff. Values are untrusted text, cut to [`MAX_VALUE`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Handoff {
@@ -44,9 +55,14 @@ pub(crate) struct Handoff {
     pub(crate) prev: String,
     /// Who claimed the handoff, empty when unclaimed.
     pub(crate) claimed_by: String,
+    pub(crate) kind: Kind,
+    /// The first body line that is not a heading, without its bullet; empty
+    /// when none fits in the head read.
+    pub(crate) summary: String,
 }
 
-/// Every `<root>/*/sessions/*.md` handoff with a `status` key, newest first.
+/// Every `<root>/*/LATEST.md`, `<root>/*/history/*.md` and
+/// `<root>/*/sessions/*.md` handoff with a `status` key, newest first.
 pub(crate) fn list_all(root: &Path) -> Vec<Handoff> {
     let mut found: Vec<Handoff> = entries(root, EntryKind::Dir)
         .into_iter()
@@ -55,24 +71,36 @@ pub(crate) fn list_all(root: &Path) -> Vec<Handoff> {
                 .file_name()
                 .map(|name| name.to_string_lossy().into_owned())
                 .unwrap_or_default();
-            // A symlinked `sessions` is not a directory to `file_type`.
-            let sessions = project.join("sessions");
-            let is_dir = std::fs::symlink_metadata(&sessions).is_ok_and(|m| m.is_dir());
-            let files = if is_dir {
-                entries(&sessions, EntryKind::File)
-            } else {
-                Vec::new()
-            };
-            files
-                .into_iter()
-                .filter(|file| file.extension().is_some_and(|ext| ext == "md"))
-                .filter_map(|file| read_handoff(file, &name))
-                .collect::<Vec<_>>()
+            let mut found: Vec<Handoff> = Vec::new();
+            // A symlinked `LATEST.md` is not a file to `symlink_metadata`.
+            let latest = project.join("LATEST.md");
+            if std::fs::symlink_metadata(&latest).is_ok_and(|m| m.is_file()) {
+                found.extend(read_handoff(latest, &name, Kind::Latest));
+            }
+            for (dir, kind) in [("history", Kind::History), ("sessions", Kind::Legacy)] {
+                found.extend(
+                    md_files(&project.join(dir))
+                        .into_iter()
+                        .filter_map(|file| read_handoff(file, &name, kind)),
+                );
+            }
+            found
         })
         .collect();
     found.sort_by(|a, b| b.created.cmp(&a.created).then_with(|| a.path.cmp(&b.path)));
     found.truncate(MAX_HANDOFFS);
     found
+}
+
+/// The `.md` files of `dir`; none when `dir` is a symlink.
+fn md_files(dir: &Path) -> Vec<PathBuf> {
+    if !std::fs::symlink_metadata(dir).is_ok_and(|m| m.is_dir()) {
+        return Vec::new();
+    }
+    entries(dir, EntryKind::File)
+        .into_iter()
+        .filter(|file| file.extension().is_some_and(|ext| ext == "md"))
+        .collect()
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -99,7 +127,7 @@ fn entries(dir: &Path, kind: EntryKind) -> Vec<PathBuf> {
 
 /// The handoff a file describes, `None` unless its front matter is closed
 /// and has a `status` key.
-fn read_handoff(path: PathBuf, project: &str) -> Option<Handoff> {
+fn read_handoff(path: PathBuf, project: &str, kind: Kind) -> Option<Handoff> {
     let head = read_head(&path)?;
     let mut lines = head.lines();
     if lines.next()?.trim() != "---" {
@@ -108,7 +136,7 @@ fn read_handoff(path: PathBuf, project: &str) -> Option<Handoff> {
     // The first occurrence of a key wins.
     let mut values: HashMap<&'static str, String> = HashMap::new();
     let mut closed = false;
-    for line in lines {
+    for line in lines.by_ref() {
         if line.trim() == "---" {
             closed = true;
             break;
@@ -124,6 +152,7 @@ fn read_handoff(path: PathBuf, project: &str) -> Option<Handoff> {
     if !closed {
         return None;
     }
+    let summary = summary(lines);
     let status = cut(&values.remove("status")?);
     let mut value = |key: &str| cut(&values.remove(key).unwrap_or_default());
     let id = match value("id") {
@@ -139,8 +168,25 @@ fn read_handoff(path: PathBuf, project: &str) -> Option<Handoff> {
         parent: value("parent"),
         prev: value("prev"),
         claimed_by: value("claimed_by"),
+        kind,
+        summary,
         path,
     })
+}
+
+/// The first body line that is not blank or a markdown heading, with a
+/// leading bullet stripped.
+fn summary<'a>(body: impl Iterator<Item = &'a str>) -> String {
+    body.map(str::trim)
+        .filter(|line| !line.starts_with('#'))
+        .map(|line| {
+            line.strip_prefix("- ")
+                .or_else(|| line.strip_prefix("* "))
+                .unwrap_or(line)
+        })
+        .map(cut)
+        .find(|line| !line.is_empty())
+        .unwrap_or_default()
 }
 
 fn cut(value: &str) -> String {

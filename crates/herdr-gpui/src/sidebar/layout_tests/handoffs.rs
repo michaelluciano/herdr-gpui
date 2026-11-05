@@ -1,7 +1,11 @@
 #![allow(clippy::expect_used)]
 
 use super::*;
-use crate::{config::LayoutMode, handoffs::Handoff, state::ConnectionStatus};
+use crate::{
+    config::LayoutMode,
+    handoffs::{Handoff, Kind},
+    state::ConnectionStatus,
+};
 use gpui::{Entity, VisualTestContext, px, size};
 
 /// An open handoff with the given id, project and created.
@@ -16,6 +20,8 @@ pub(super) fn handoff(id: &str, project: &str, created: &str) -> Handoff {
         parent: String::new(),
         prev: String::new(),
         claimed_by: String::new(),
+        kind: Kind::Legacy,
+        summary: String::new(),
     }
 }
 
