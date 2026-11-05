@@ -47,6 +47,8 @@ mod handoff_open;
 #[cfg(test)]
 mod handoffs;
 #[cfg(test)]
+mod handoffs_colors;
+#[cfg(test)]
 mod handoffs_history;
 #[cfg(test)]
 mod handoffs_newest;

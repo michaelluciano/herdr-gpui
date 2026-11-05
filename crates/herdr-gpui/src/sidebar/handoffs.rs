@@ -7,6 +7,7 @@ use super::{
 };
 use crate::{
     HerdrWindow,
+    config::{Theme, mix},
     handoffs::{Handoff, Shelf, detail, target_for},
     window::{Flash, chrome_focus::Region},
 };
@@ -19,6 +20,36 @@ const MAX_SHARE: f32 = 0.30;
 const CHEVRON_OPEN: &str = "\u{25be}";
 /// The chevron before the title while the body is folded.
 const CHEVRON_FOLDED: &str = "\u{25b8}";
+
+/// The colours of one handoff row.
+pub(super) struct RowColors {
+    /// The chip fill of an active row; `None` keeps the sidebar's own.
+    pub(super) bg: Option<u32>,
+    /// The fill while the pointer is over an active row.
+    pub(super) hover_bg: Option<u32>,
+    pub(super) id_text: u32,
+    pub(super) detail_text: u32,
+}
+
+/// An active row (`shelf == None`) is the theme's pair inverted: a
+/// foreground-coloured chip with background-coloured text, the detail line
+/// a step toward the chip. A history row keeps the dimmed look.
+pub(super) fn row_colors(theme: &Theme, shelf: Option<Shelf>) -> RowColors {
+    match shelf {
+        None => RowColors {
+            bg: Some(theme.foreground),
+            hover_bg: Some(mix(theme.foreground, theme.background, 6)),
+            id_text: theme.background,
+            detail_text: mix(theme.background, theme.foreground, 16),
+        },
+        Some(_) => RowColors {
+            bg: None,
+            hover_bg: None,
+            id_text: theme.muted,
+            detail_text: theme.muted,
+        },
+    }
+}
 
 fn flip_folded(this: &mut HerdrWindow, cx: &mut Context<HerdrWindow>) {
     this.handoffs.collapsed = !this.handoffs.collapsed;
@@ -200,10 +231,7 @@ impl HerdrWindow {
         let theme = &self.theme;
         let path: PathBuf = handoff.path.clone();
         let target = target_for(handoff);
-        let id_color = match shelf {
-            None => theme.subtext(),
-            Some(_) => theme.muted,
-        };
+        let colors = row_colors(theme, shelf);
         let aria = match shelf {
             None => format!("Copy path of handoff {}", handoff.id),
             Some(shelf) => format!("Copy path of {} handoff {}", shelf.label(), handoff.id),
@@ -218,7 +246,11 @@ impl HerdrWindow {
             .px(px(look.content_x()))
             .py(px(look.row_padding()))
             .cursor_pointer()
-            .hover(|row| row.bg(rgba(crate::panel_resize::RESIZE_HOVER)))
+            .when_some(colors.bg, |row, bg| row.bg(rgb(bg)))
+            .map(|row| match colors.hover_bg {
+                Some(hover) => row.hover(|row| row.bg(rgb(hover))),
+                None => row.hover(|row| row.bg(rgba(crate::panel_resize::RESIZE_HOVER))),
+            })
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.copy_handoff_path(&path, cx);
             }))
@@ -232,13 +264,13 @@ impl HerdrWindow {
             .child(
                 div()
                     .truncate()
-                    .text_color(rgb(id_color))
+                    .text_color(rgb(colors.id_text))
                     .child(label_text(&handoff.id)),
             )
             .child(
                 div()
                     .truncate()
-                    .text_color(rgb(theme.muted))
+                    .text_color(rgb(colors.detail_text))
                     .child(label_text(&detail(handoff, shelf))),
             );
         self.chrome_stop(Region::Sidebar, row)
