@@ -9,6 +9,7 @@ mod dismissed;
 mod line;
 mod list;
 mod newest;
+mod pinned;
 mod poll;
 mod target;
 

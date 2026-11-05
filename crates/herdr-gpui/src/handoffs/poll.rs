@@ -4,6 +4,7 @@ use super::{
     classify::{Board, classify_with},
     dismissed,
     list::{Handoff, list_all},
+    pinned,
 };
 use crate::HerdrWindow;
 use crate::state_file;
@@ -26,7 +27,10 @@ pub(crate) struct Handoffs {
     list: Vec<Handoff>,
     /// Files removed from the list; saved when `saver` is set.
     pub(crate) dismissed: HashSet<PathBuf>,
+    /// Files pinned to the top of the active list; saved when `pin_saver` is set.
+    pub(crate) pinned: HashSet<PathBuf>,
     saver: Option<Saver>,
+    pin_saver: Option<Saver>,
     /// The saved set was read.
     restored: bool,
     pub(crate) last_poll: Option<Instant>,
@@ -38,7 +42,7 @@ pub(crate) struct Handoffs {
     loading: bool,
 }
 
-/// Saves the dismissed set off the UI thread.
+/// Saves a path set off the UI thread.
 struct Saver(state_file::Writer<Vec<String>>);
 
 impl fmt::Debug for Saver {
@@ -55,7 +59,7 @@ impl Handoffs {
     }
 
     fn rebuild(&mut self) {
-        self.board = classify_with(self.list.clone(), &self.dismissed);
+        self.board = classify_with(self.list.clone(), &self.dismissed).pinned_first(&self.pinned);
     }
 
     /// Removes one handoff from the list.
@@ -82,6 +86,17 @@ impl Handoffs {
         }
     }
 
+    /// Pins `path`, or unpins it when pinned. Pins order the active list only.
+    pub(crate) fn toggle_pin(&mut self, path: PathBuf) {
+        if !self.pinned.remove(&path) {
+            self.pinned.insert(path);
+        }
+        self.rebuild();
+        if let Some(saver) = &self.pin_saver {
+            saver.0.save(pinned::to_saved(&self.pinned));
+        }
+    }
+
     fn changed(&mut self) {
         self.rebuild();
         if let Some(saver) = &self.saver {
@@ -95,13 +110,19 @@ impl Handoffs {
         if std::mem::replace(&mut self.restored, true) {
             return;
         }
-        let Some(path) = dismissed::file() else {
-            return;
-        };
-        self.dismissed.extend(dismissed::load(&path));
-        match state_file::Writer::start("handoff-dismissed", path) {
-            Ok(writer) => self.saver = Some(Saver(writer)),
-            Err(error) => tracing::warn!(%error, "Cannot start the dismissed handoffs worker"),
+        if let Some(path) = dismissed::file() {
+            self.dismissed.extend(dismissed::load(&path));
+            match state_file::Writer::start("handoff-dismissed", path) {
+                Ok(writer) => self.saver = Some(Saver(writer)),
+                Err(error) => tracing::warn!(%error, "Cannot start the dismissed handoffs worker"),
+            }
+        }
+        if let Some(path) = pinned::file() {
+            self.pinned.extend(pinned::load(&path));
+            match state_file::Writer::start("handoff-pinned", path) {
+                Ok(writer) => self.pin_saver = Some(Saver(writer)),
+                Err(error) => tracing::warn!(%error, "Cannot start the pinned handoffs worker"),
+            }
         }
         self.rebuild();
     }

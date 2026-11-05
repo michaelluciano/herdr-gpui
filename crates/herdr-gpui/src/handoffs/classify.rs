@@ -41,6 +41,15 @@ pub(crate) struct Board {
 }
 
 impl Board {
+    /// Moves the pinned active handoffs to the top, each group keeping its
+    /// order. Only the active list is reordered: a pin on a history row
+    /// changes nothing until that handoff is active again.
+    pub(crate) fn pinned_first(mut self, pinned: &HashSet<PathBuf>) -> Self {
+        self.active
+            .sort_by_key(|handoff| !pinned.contains(&handoff.path));
+        self
+    }
+
     /// How many history rows sit on `shelf`.
     pub(crate) fn count(&self, shelf: Shelf) -> usize {
         self.history.iter().filter(|s| s.shelf == shelf).count()

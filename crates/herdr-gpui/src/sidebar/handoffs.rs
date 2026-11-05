@@ -24,31 +24,29 @@ const CHEVRON_FOLDED: &str = "\u{25b8}";
 
 /// Keeps a row's remove control's element id apart from the row's own.
 const REMOVE_OFFSET: usize = 1_000_000;
+/// Keeps a row's lock control's element id apart from the others.
+const PIN_OFFSET: usize = 2_000_000;
+/// A closed lock: the handoff is pinned.
+const LOCK_CLOSED: &str = "\u{1f512}";
+/// An open lock: the handoff is not pinned.
+const LOCK_OPEN: &str = "\u{1f513}";
 
 /// The colours of one handoff row.
 pub(super) struct RowColors {
-    /// The chip fill of an active row; `None` keeps the sidebar's own.
-    pub(super) bg: Option<u32>,
-    /// The fill while the pointer is over an active row.
-    pub(super) hover_bg: Option<u32>,
     pub(super) id_text: u32,
     pub(super) detail_text: u32,
 }
 
-/// An active row (`shelf == None`) is the theme's pair inverted: a
-/// foreground-coloured chip with background-coloured text, the detail line
-/// a step toward the chip. A history row keeps the dimmed look.
+/// An active row (`shelf == None`) sits on the sidebar's own background: the
+/// id line in white (the foreground), the detail line a step dimmer (the
+/// foreground blended 12% toward the background, the nearest step that keeps 4.5 on every theme tested). A history row is gray (muted) on both lines.
 pub(super) fn row_colors(theme: &Theme, shelf: Option<Shelf>) -> RowColors {
     match shelf {
         None => RowColors {
-            bg: Some(theme.foreground),
-            hover_bg: Some(mix(theme.foreground, theme.background, 6)),
-            id_text: theme.background,
-            detail_text: mix(theme.background, theme.foreground, 16),
+            id_text: theme.foreground,
+            detail_text: mix(theme.background, theme.foreground, 88),
         },
         Some(_) => RowColors {
-            bg: None,
-            hover_bg: None,
             id_text: theme.muted,
             detail_text: theme.muted,
         },
@@ -62,6 +60,11 @@ fn flip_folded(this: &mut HerdrWindow, cx: &mut Context<HerdrWindow>) {
 
 fn dismiss(this: &mut HerdrWindow, path: PathBuf, cx: &mut Context<HerdrWindow>) {
     this.handoffs.dismiss(path);
+    cx.notify();
+}
+
+fn toggle_pin(this: &mut HerdrWindow, path: PathBuf, cx: &mut Context<HerdrWindow>) {
+    this.handoffs.toggle_pin(path);
     cx.notify();
 }
 
@@ -304,12 +307,44 @@ impl HerdrWindow {
         let theme = &self.theme;
         let path: PathBuf = handoff.path.clone();
         let remove_path = path.clone();
+        let pin_path = path.clone();
+        let pinned = self.handoffs.pinned.contains(&path);
         let target = target_for(handoff);
         let colors = row_colors(theme, shelf);
         let aria = match shelf {
             None => format!("Copy path of handoff {}", handoff.id),
             Some(shelf) => format!("Copy path of {} handoff {}", shelf.label(), handoff.id),
         };
+        let (glyph, pin_aria, pin_ink) = if pinned {
+            (
+                LOCK_CLOSED,
+                format!("Unpin handoff {}", handoff.id),
+                colors.id_text,
+            )
+        } else {
+            (
+                LOCK_OPEN,
+                format!("Pin handoff {}", handoff.id),
+                theme.muted,
+            )
+        };
+        let pin = div()
+            .id((prefix, index + PIN_OFFSET))
+            .debug_selector(|| format!("{prefix}-pin-{index}"))
+            .role(Role::Button)
+            .aria_label(pin_aria)
+            .flex_none()
+            .px_1()
+            .cursor_pointer()
+            .text_color(rgb(pin_ink))
+            .when(!pinned, |pin| pin.opacity(0.6))
+            .hover(|style| style.text_color(rgb(colors.id_text)).opacity(1.0))
+            .on_click(cx.listener(move |this, _, _, cx| {
+                cx.stop_propagation();
+                toggle_pin(this, pin_path.clone(), cx);
+            }))
+            .child(label_text(glyph));
+        let pin = self.chrome_stop(Region::Sidebar, pin);
         let remove = div()
             .id((prefix, index + REMOVE_OFFSET))
             .debug_selector(|| format!("{prefix}-x-{index}"))
@@ -336,11 +371,7 @@ impl HerdrWindow {
             .px(px(look.content_x()))
             .py(px(look.row_padding()))
             .cursor_pointer()
-            .when_some(colors.bg, |row, bg| row.bg(rgb(bg)))
-            .map(|row| match colors.hover_bg {
-                Some(hover) => row.hover(|row| row.bg(rgb(hover))),
-                None => row.hover(|row| row.bg(rgba(crate::panel_resize::RESIZE_HOVER))),
-            })
+            .hover(|row| row.bg(rgba(crate::panel_resize::RESIZE_HOVER)))
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.copy_handoff_path(&path, cx);
             }))
@@ -354,6 +385,7 @@ impl HerdrWindow {
             .flex()
             .items_center()
             .gap_1()
+            .child(pin)
             .child(
                 div()
                     .flex_1()

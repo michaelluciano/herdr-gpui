@@ -1,0 +1,90 @@
+//! The lock at the left of each handoff row pins it to the top of the active list.
+#![allow(clippy::expect_used)]
+
+use super::handoff_copy::click;
+use super::handoffs::{handoff, texts, window};
+use crate::handoffs::Handoff;
+use gpui::VisualTestContext;
+
+const CLOSED: &str = "\u{1f512}";
+const OPEN: &str = "\u{1f513}";
+
+fn picked(id: &str, project: &str, created: &str) -> Handoff {
+    Handoff {
+        status: "claimed".into(),
+        claimed_by: "who".into(),
+        ..handoff(id, project, created)
+    }
+}
+
+fn list() -> Vec<Handoff> {
+    vec![
+        handoff("a-new", "alpha", "2026-11-04T10:00:00"),
+        handoff("b-new", "beta", "2026-11-03T10:00:00"),
+        picked("c-pick", "gamma", "2026-11-02T10:00:00"),
+    ]
+}
+
+/// Whether any row shows `glyph` (the probe keys on distinct text).
+fn shows(cx: &mut VisualTestContext, glyph: &str) -> bool {
+    texts(cx).iter().any(|t| t == glyph)
+}
+
+#[gpui::test]
+fn every_row_has_an_open_lock_until_it_is_pinned(cx: &mut gpui::TestAppContext) {
+    let (_view, cx) = window(cx, None, list());
+    click(cx, "handoffs-history-toggle");
+    for selector in [
+        "handoff-row-pin-0",
+        "handoff-row-pin-1",
+        "handoff-history-row-pin-0",
+    ] {
+        assert!(cx.debug_bounds(selector).is_some(), "{selector}");
+    }
+    assert!(shows(cx, OPEN));
+    assert!(!shows(cx, CLOSED));
+    let pin = cx.debug_bounds("handoff-row-pin-0").expect("pin");
+    let row = cx.debug_bounds("handoff-row-0").expect("row");
+    let id = cx.debug_bounds("handoff-row-x-0").expect("x");
+    assert!(pin.left() < id.left(), "the lock is left of the x");
+    assert!(
+        pin.left() - row.left() < row.size.width / 4.,
+        "at the left edge"
+    );
+}
+
+#[gpui::test]
+fn clicking_the_lock_pins_without_copying_the_path(cx: &mut gpui::TestAppContext) {
+    let (view, cx) = window(cx, None, list());
+    click(cx, "handoff-row-pin-1");
+    assert_eq!(
+        cx.update(|_, cx| cx.read_from_clipboard().and_then(|item| item.text())),
+        None,
+        "the row's own click must not fire"
+    );
+    view.read_with(cx, |view, _| {
+        let ids: Vec<_> = view.handoffs.board.active.iter().map(|h| &h.id).collect();
+        assert_eq!(ids, vec!["b-new", "a-new"]);
+        assert_eq!(view.handoffs.pinned.len(), 1);
+    });
+    assert!(shows(cx, CLOSED) && shows(cx, OPEN));
+    // The pinned row is now first, and clicking its lock unpins.
+    click(cx, "handoff-row-pin-0");
+    view.read_with(cx, |view, _| {
+        let ids: Vec<_> = view.handoffs.board.active.iter().map(|h| &h.id).collect();
+        assert_eq!(ids, vec!["a-new", "b-new"]);
+        assert!(view.handoffs.pinned.is_empty());
+    });
+}
+
+#[gpui::test]
+fn a_pinned_history_row_stays_in_history_and_keeps_its_lock(cx: &mut gpui::TestAppContext) {
+    let (view, cx) = window(cx, None, list());
+    click(cx, "handoffs-history-toggle");
+    click(cx, "handoff-history-row-pin-0");
+    view.read_with(cx, |view, _| {
+        assert_eq!(view.handoffs.board.active.len(), 2);
+        assert_eq!(view.handoffs.board.history[0].handoff.id, "c-pick");
+    });
+    assert!(shows(cx, CLOSED));
+}

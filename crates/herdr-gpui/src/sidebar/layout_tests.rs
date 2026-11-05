@@ -57,6 +57,8 @@ mod handoffs_history;
 #[cfg(test)]
 mod handoffs_newest;
 #[cfg(test)]
+mod handoffs_pin;
+#[cfg(test)]
 mod host_agents;
 #[cfg(test)]
 mod host_groups;

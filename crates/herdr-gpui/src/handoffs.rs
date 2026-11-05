@@ -7,6 +7,7 @@ mod classify;
 mod dismissed;
 mod line;
 mod list;
+mod pinned;
 mod poll;
 mod target;
 
