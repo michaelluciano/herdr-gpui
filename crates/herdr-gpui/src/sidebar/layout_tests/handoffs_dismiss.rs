@@ -65,7 +65,7 @@ fn the_toggle_reads_all_with_the_total_and_the_active_count_stays(cx: &mut gpui:
     let (_view, cx) = window(cx, None, list());
     let shown = texts(cx);
     assert!(has(&shown, "all 3"), "{shown:?}");
-    assert!(has(&shown, "2"), "{shown:?}");
+    assert!(has(&shown, "\u{b7} 2 active"), "{shown:?}");
     assert!(!shown.iter().any(|t| t.starts_with("picked up ")));
     assert!(cx.debug_bounds("handoffs-clear-picked-up").is_none());
 }
