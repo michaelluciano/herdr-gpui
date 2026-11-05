@@ -1,7 +1,7 @@
 //! Sorts the loaded handoffs into the active list and the history.
 
 use super::list::Handoff;
-use std::collections::HashSet;
+use std::{collections::HashSet, path::PathBuf};
 
 /// Why a handoff is in the history instead of the active list.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -10,6 +10,8 @@ pub(crate) enum Shelf {
     PickedUp,
     /// A newer handoff of its project exists.
     Superseded,
+    /// The operator removed it from the list.
+    Dismissed,
 }
 
 impl Shelf {
@@ -18,6 +20,7 @@ impl Shelf {
         match self {
             Self::PickedUp => "picked up",
             Self::Superseded => "superseded",
+            Self::Dismissed => "dismissed",
         }
     }
 }
@@ -37,12 +40,36 @@ pub(crate) struct Board {
     pub(crate) history: Vec<Shelved>,
 }
 
+impl Board {
+    /// How many history rows sit on `shelf`.
+    pub(crate) fn count(&self, shelf: Shelf) -> usize {
+        self.history.iter().filter(|s| s.shelf == shelf).count()
+    }
+
+    /// The files of the picked-up rows.
+    pub(crate) fn picked_up_paths(&self) -> Vec<PathBuf> {
+        self.history
+            .iter()
+            .filter(|s| s.shelf == Shelf::PickedUp)
+            .map(|s| s.handoff.path.clone())
+            .collect()
+    }
+}
+
+/// [`classify_with`] with nothing dismissed.
+#[cfg(test)]
+pub(crate) fn classify(list: Vec<Handoff>) -> Board {
+    classify_with(list, &HashSet::new())
+}
+
 /// Sorts `list`, as [`super::list::list_all`] returns it (newest first), into
 /// the board. Per project only the newest handoff can be active, and only
 /// while it is open and unclaimed; every older one is superseded. A handoff
 /// whose status is neither open nor picked up is hidden and does not count as
-/// the project's newest.
-pub(crate) fn classify(list: Vec<Handoff>) -> Board {
+/// the project's newest. A dismissed handoff still counts as its project's
+/// newest, so the older ones stay superseded, but it goes to the history as
+/// [`Shelf::Dismissed`].
+pub(crate) fn classify_with(list: Vec<Handoff>, dismissed: &HashSet<PathBuf>) -> Board {
     let mut seen: HashSet<String> = HashSet::new();
     let mut board = Board::default();
     for handoff in list {
@@ -54,6 +81,13 @@ pub(crate) fn classify(list: Vec<Handoff>) -> Board {
             _ => continue,
         };
         let newest = seen.insert(handoff.project.clone());
+        if dismissed.contains(&handoff.path) {
+            board.history.push(Shelved {
+                shelf: Shelf::Dismissed,
+                handoff,
+            });
+            continue;
+        }
         match (newest, picked_up) {
             (true, false) => board.active.push(handoff),
             (true, true) => board.history.push(Shelved {

@@ -5,6 +5,7 @@ use super::*;
 use std::path::{Path, PathBuf};
 
 mod classify;
+mod dismissed;
 mod line;
 mod list;
 mod newest;

@@ -4,6 +4,7 @@
 //! untrusted text; only a few front matter keys are read.
 
 mod classify;
+mod dismissed;
 mod line;
 mod list;
 mod poll;
@@ -12,7 +13,9 @@ mod target;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use classify::{Shelf, classify};
+pub(crate) use classify::Shelf;
+#[cfg(test)]
+pub(crate) use classify::classify;
 pub(crate) use line::detail;
 pub(crate) use list::Handoff;
 #[cfg(test)]

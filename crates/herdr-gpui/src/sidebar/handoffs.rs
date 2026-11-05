@@ -1,6 +1,7 @@
 //! The Handoffs section below the workspaces and agents lists: the newest
-//! unclaimed handoff of each project, and behind a header control the
-//! picked-up and superseded ones.
+//! unclaimed handoff of each project, and behind a header control every
+//! handoff: picked up, superseded and dismissed. Each row has an x that
+//! removes it from the list.
 
 use super::{
     accessibility::expandable, label_text, layout::SidebarLook, line_height, render::header_frame,
@@ -20,6 +21,9 @@ const MAX_SHARE: f32 = 0.30;
 const CHEVRON_OPEN: &str = "\u{25be}";
 /// The chevron before the title while the body is folded.
 const CHEVRON_FOLDED: &str = "\u{25b8}";
+
+/// Keeps a row's remove control's element id apart from the row's own.
+const REMOVE_OFFSET: usize = 1_000_000;
 
 /// The colours of one handoff row.
 pub(super) struct RowColors {
@@ -53,6 +57,11 @@ pub(super) fn row_colors(theme: &Theme, shelf: Option<Shelf>) -> RowColors {
 
 fn flip_folded(this: &mut HerdrWindow, cx: &mut Context<HerdrWindow>) {
     this.handoffs.collapsed = !this.handoffs.collapsed;
+    cx.notify();
+}
+
+fn dismiss(this: &mut HerdrWindow, path: PathBuf, cx: &mut Context<HerdrWindow>) {
+    this.handoffs.dismiss(path);
     cx.notify();
 }
 
@@ -101,7 +110,12 @@ impl HerdrWindow {
             } else {
                 Vec::new()
             };
-            div()
+            let bar = self
+                .handoffs
+                .history_open
+                .then(|| self.bulk_actions(cx))
+                .flatten();
+            let list = div()
                 .id("handoffs-scroll")
                 .debug_selector(|| "handoffs-scroll".into())
                 .flex_initial()
@@ -112,7 +126,8 @@ impl HerdrWindow {
                 .text_size(px(font.size))
                 .line_height(px(line_height(font)))
                 .children(active)
-                .children(shelved)
+                .children(shelved);
+            div().min_h_0().flex().flex_col().children(bar).child(list)
         });
         let count = div()
             .debug_selector(|| "handoffs-count".into())
@@ -186,7 +201,65 @@ impl HerdrWindow {
         })
     }
 
-    /// The control that shows or hides the picked-up and superseded rows.
+    /// The all view's bar: clear the picked-up rows, restore the dismissed
+    /// ones. `None` when neither has anything to act on.
+    fn bulk_actions(&self, cx: &mut Context<Self>) -> Option<Div> {
+        let picked = self.handoffs.board.count(Shelf::PickedUp);
+        let dismissed = self.handoffs.board.count(Shelf::Dismissed);
+        if picked == 0 && dismissed == 0 {
+            return None;
+        }
+        let action = |id: &'static str, text: String, aria: String| {
+            div()
+                .id(id)
+                .debug_selector(|| id.into())
+                .role(Role::Button)
+                .aria_label(aria)
+                .cursor_pointer()
+                .text_color(rgb(self.theme.muted))
+                .hover(|style| style.text_color(rgb(self.theme.foreground)))
+                .child(label_text(&text))
+        };
+        let clear = (picked > 0).then(|| {
+            let control = action(
+                "handoffs-clear-picked-up",
+                format!("Clear picked up ({picked})"),
+                format!("Remove {picked} picked up handoffs from the list"),
+            )
+            .on_click(cx.listener(|this, _, _, cx| {
+                cx.stop_propagation();
+                this.handoffs.clear_picked_up();
+                cx.notify();
+            }));
+            self.chrome_stop(Region::Sidebar, control)
+        });
+        let restore = (dismissed > 0).then(|| {
+            let control = action(
+                "handoffs-restore",
+                format!("Restore cleared ({dismissed})"),
+                format!("Restore {dismissed} removed handoffs to the list"),
+            )
+            .on_click(cx.listener(|this, _, _, cx| {
+                cx.stop_propagation();
+                this.handoffs.restore_dismissed();
+                cx.notify();
+            }));
+            self.chrome_stop(Region::Sidebar, control)
+        });
+        Some(
+            div()
+                .flex_none()
+                .flex()
+                .items_center()
+                .gap_3()
+                .px(px(self.config.sidebar.size))
+                .py_1()
+                .children(clear)
+                .children(restore),
+        )
+    }
+
+    /// The control that shows or hides every handoff beyond the active ones.
     fn history_toggle(&self, cx: &mut Context<Self>) -> Stateful<Div> {
         let open = self.handoffs.history_open;
         let count = self.handoffs.board.history.len();
@@ -194,7 +267,7 @@ impl HerdrWindow {
             .id("handoffs-history-toggle")
             .debug_selector(|| "handoffs-history-toggle".into())
             .role(Role::Button)
-            .aria_label(format!("Picked up and superseded handoffs: {count}"))
+            .aria_label(format!("All handoffs: {count}"))
             .cursor_pointer()
             .text_color(rgb(self.theme.muted))
             .hover(|style| style.text_color(rgb(self.theme.foreground)))
@@ -202,7 +275,7 @@ impl HerdrWindow {
                 cx.stop_propagation();
                 flip_history(this, cx);
             }))
-            .child(label_text(&format!("picked up {count}")));
+            .child(label_text(&format!("all {count}")));
         let control = self.chrome_stop(Region::Sidebar, control);
         expandable(control, open, cx.entity().downgrade(), |this, _, cx| {
             flip_history(this, cx);
@@ -230,12 +303,29 @@ impl HerdrWindow {
         let (prefix, index) = slot;
         let theme = &self.theme;
         let path: PathBuf = handoff.path.clone();
+        let remove_path = path.clone();
         let target = target_for(handoff);
         let colors = row_colors(theme, shelf);
         let aria = match shelf {
             None => format!("Copy path of handoff {}", handoff.id),
             Some(shelf) => format!("Copy path of {} handoff {}", shelf.label(), handoff.id),
         };
+        let remove = div()
+            .id((prefix, index + REMOVE_OFFSET))
+            .debug_selector(|| format!("{prefix}-x-{index}"))
+            .role(Role::Button)
+            .aria_label(format!("Remove handoff {} from list", handoff.id))
+            .flex_none()
+            .px_1()
+            .cursor_pointer()
+            .text_color(rgb(colors.detail_text))
+            .hover(|style| style.text_color(rgb(colors.id_text)))
+            .on_click(cx.listener(move |this, _, _, cx| {
+                cx.stop_propagation();
+                dismiss(this, remove_path.clone(), cx);
+            }))
+            .child(label_text("\u{d7}"));
+        let remove = self.chrome_stop(Region::Sidebar, remove);
         let row = div()
             .id(slot)
             .debug_selector(|| format!("{prefix}-{index}"))
@@ -261,18 +351,27 @@ impl HerdrWindow {
                     this.open_code_view(&target, window, cx);
                 }),
             )
+            .flex()
+            .items_center()
+            .gap_1()
             .child(
                 div()
-                    .truncate()
-                    .text_color(rgb(colors.id_text))
-                    .child(label_text(&handoff.id)),
+                    .flex_1()
+                    .min_w_0()
+                    .child(
+                        div()
+                            .truncate()
+                            .text_color(rgb(colors.id_text))
+                            .child(label_text(&handoff.id)),
+                    )
+                    .child(
+                        div()
+                            .truncate()
+                            .text_color(rgb(colors.detail_text))
+                            .child(label_text(&detail(handoff, shelf))),
+                    ),
             )
-            .child(
-                div()
-                    .truncate()
-                    .text_color(rgb(colors.detail_text))
-                    .child(label_text(&detail(handoff, shelf))),
-            );
+            .child(remove);
         self.chrome_stop(Region::Sidebar, row)
     }
 }

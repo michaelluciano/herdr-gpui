@@ -49,7 +49,7 @@ pub(super) fn window(
             shown.focused_tab_id = Some("t0".into());
             view.live.snapshot = Some(Arc::new(shown));
             view.live.status = ConnectionStatus::Connected;
-            view.handoffs.board = crate::handoffs::classify(list);
+            view.handoffs.set_list(list);
             view
         });
         cx.observe(&view, |_, _, cx| cx.notify()).detach();
