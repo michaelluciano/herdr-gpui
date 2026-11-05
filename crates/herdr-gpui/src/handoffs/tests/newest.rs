@@ -94,3 +94,53 @@ fn a_handoff_with_no_branch_or_cwd_is_shown() {
     let board = classify(list_all(root.path()));
     assert_eq!(split(&board), (vec!["S46"], Vec::new()));
 }
+
+/// A header with `status: open`, a `created` and a `prev`.
+fn linked_header(id: &str, created: &str, prev: &str) -> String {
+    format!("---\nid: {id}\nprev: {prev}\ncreated: {created}\nstatus: open\n---\nbody\n")
+}
+
+fn listed(list: &[Handoff]) -> Vec<&str> {
+    list.iter().map(|h| h.id.as_str()).collect()
+}
+
+#[test]
+fn a_same_day_successor_sorts_before_the_handoff_it_names_as_prev() {
+    let root = Root::new("prev-tie");
+    // Paths ascend S18 < S19, and the old rule put S18 first.
+    root.session("wb", "S18.md", linked_header("S18", "2026-10-28", "S17"));
+    root.session("wb", "S19.md", linked_header("S19", "2026-10-28", "S18"));
+    let list = list_all(root.path());
+    assert_eq!(listed(&list), ["S19", "S18"]);
+    let board = classify(list);
+    assert_eq!(
+        split(&board),
+        (vec!["S19"], vec![("S18", Shelf::Superseded)])
+    );
+}
+
+#[test]
+fn a_prev_link_beats_the_path_order_when_the_path_disagrees() {
+    let root = Root::new("prev-vs-path");
+    // The successor's path sorts first ascending and last descending.
+    root.session("wb", "a-new.md", linked_header("new", "2026-10-28", "old"));
+    root.session("wb", "z-old.md", linked_header("old", "2026-10-28", ""));
+    assert_eq!(listed(&list_all(root.path())), ["new", "old"]);
+}
+
+#[test]
+fn equal_created_without_a_prev_link_breaks_by_path_descending() {
+    let root = Root::new("path-desc");
+    root.session("wb", "S18.md", linked_header("S18", "2026-10-28", ""));
+    root.session("wb", "S19.md", linked_header("S19", "2026-10-28", ""));
+    assert_eq!(listed(&list_all(root.path())), ["S19", "S18"]);
+}
+
+#[test]
+fn a_prev_chain_of_three_on_one_day_lists_newest_first() {
+    let root = Root::new("chain");
+    root.session("wb", "z.md", linked_header("B", "2026-10-28", "C"));
+    root.session("wb", "a.md", linked_header("C", "2026-10-28", ""));
+    root.session("wb", "m.md", linked_header("A", "2026-10-28", "B"));
+    assert_eq!(listed(&list_all(root.path())), ["A", "B", "C"]);
+}

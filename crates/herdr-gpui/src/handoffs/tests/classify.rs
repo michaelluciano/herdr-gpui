@@ -112,7 +112,8 @@ fn the_same_session_id_in_another_project_is_not_merged() {
 
 #[test]
 fn a_created_tie_in_one_session_keeps_the_path_first_one() {
-    // Equal `created` falls to the path order `list_all` sorts by.
+    // `classify` keeps the order it is given; `list_all` breaks a tie by path
+    // descending, so this hand-built list only fixes what the first one wins.
     let x = Handoff {
         session_id: "s1".into(),
         ..fixture("x", "p", "2026-10-01", "open")

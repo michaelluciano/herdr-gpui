@@ -26,10 +26,36 @@ const CHEVRON_FOLDED: &str = "\u{25b8}";
 const REMOVE_OFFSET: usize = 1_000_000;
 /// Keeps a row's lock control's element id apart from the others.
 const PIN_OFFSET: usize = 2_000_000;
-/// A closed lock: the handoff is pinned.
-const LOCK_CLOSED: &str = "\u{1f512}";
-/// An open lock: the handoff is not pinned.
-const LOCK_OPEN: &str = "\u{1f513}";
+/// A closed padlock: the handoff is pinned.
+const LOCK_CLOSED: &str = "icons/lock.svg";
+/// An open padlock: the handoff is not pinned.
+const LOCK_OPEN: &str = "icons/lock-open.svg";
+/// The padlock's side, a little under the row's text height.
+const LOCK_SIZE: f32 = 10.;
+/// How faint the open padlock is until the pointer is over it.
+const LOCK_OPEN_OPACITY: f32 = 0.45;
+
+/// The least contrast a pinned padlock keeps against the sidebar (WCAG's
+/// non-text minimum).
+const LOCK_CONTRAST: f32 = 3.1;
+
+/// The padlock's colour and opacity: the accent at full strength when pinned,
+/// nudged in lightness only where a theme's accent falls under
+/// [`LOCK_CONTRAST`] (Catppuccin Latte's pink does); the muted gray faded back
+/// when not.
+pub(super) fn pin_ink(theme: &Theme, pinned: bool) -> (u32, f32) {
+    if pinned {
+        let tokens = theme.tokens();
+        let ink = crate::contrast::ink(
+            tokens.accent,
+            &[theme.background, tokens.rail],
+            LOCK_CONTRAST,
+        );
+        (ink, 1.0)
+    } else {
+        (theme.muted, LOCK_OPEN_OPACITY)
+    }
+}
 
 /// The colours of one handoff row.
 pub(super) struct RowColors {
@@ -315,35 +341,34 @@ impl HerdrWindow {
             None => format!("Copy path of handoff {}", handoff.id),
             Some(shelf) => format!("Copy path of {} handoff {}", shelf.label(), handoff.id),
         };
-        let (glyph, pin_aria, pin_ink) = if pinned {
-            (
-                LOCK_CLOSED,
-                format!("Unpin handoff {}", handoff.id),
-                colors.id_text,
-            )
+        let (glyph, pin_aria) = if pinned {
+            (LOCK_CLOSED, format!("Unpin handoff {}", handoff.id))
         } else {
-            (
-                LOCK_OPEN,
-                format!("Pin handoff {}", handoff.id),
-                theme.muted,
-            )
+            (LOCK_OPEN, format!("Pin handoff {}", handoff.id))
         };
+        let (ink, opacity) = pin_ink(theme, pinned);
+        // Centred on the row's first line, whatever the row's height.
         let pin = div()
             .id((prefix, index + PIN_OFFSET))
             .debug_selector(|| format!("{prefix}-pin-{index}"))
             .role(Role::Button)
             .aria_label(pin_aria)
             .flex_none()
-            .px_1()
+            .self_start()
+            .h(px(line_height(&self.config.sidebar)))
+            .flex()
+            .items_center()
+            .px(px(2.))
             .cursor_pointer()
-            .text_color(rgb(pin_ink))
-            .when(!pinned, |pin| pin.opacity(0.6))
-            .hover(|style| style.text_color(rgb(colors.id_text)).opacity(1.0))
+            .text_color(rgb(ink))
+            .opacity(opacity)
+            .hover(|style| style.text_color(rgb(theme.foreground)).opacity(1.0))
             .on_click(cx.listener(move |this, _, _, cx| {
                 cx.stop_propagation();
                 toggle_pin(this, pin_path.clone(), cx);
             }))
-            .child(label_text(glyph));
+            // The svg takes its tint from the control, so the hover can change it.
+            .child(svg().path(glyph).size(px(LOCK_SIZE)).flex_none());
         let pin = self.chrome_stop(Region::Sidebar, pin);
         let remove = div()
             .id((prefix, index + REMOVE_OFFSET))

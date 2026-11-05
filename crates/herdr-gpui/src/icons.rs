@@ -259,6 +259,7 @@ embedded_icons! {
     "globe.svg",
     "issue.svg",
     "keyboard.svg",
+    "lock-open.svg",
     "lock.svg",
     "more.svg",
     "network/tailscale.svg",

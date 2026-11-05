@@ -70,9 +70,46 @@ pub(crate) fn list_all(root: &Path) -> Vec<Handoff> {
                 .collect::<Vec<_>>()
         })
         .collect();
-    found.sort_by(|a, b| b.created.cmp(&a.created).then_with(|| a.path.cmp(&b.path)));
+    // Newest first. Equal `created` groups by project (the projects in name
+    // order), and inside a project the later path comes first until
+    // `successors_first` puts each handoff ahead of the one it names as `prev`.
+    found.sort_by(|a, b| {
+        b.created
+            .cmp(&a.created)
+            .then_with(|| a.project.cmp(&b.project))
+            .then_with(|| b.path.cmp(&a.path))
+    });
+    successors_first(&mut found);
     found.truncate(MAX_HANDOFFS);
     found
+}
+
+/// Within each run of equal `created` and project, moves a handoff ahead of
+/// the one it names as its `prev`: dates carry no time, so a same-day
+/// successor would otherwise tie with its predecessor.
+fn successors_first(found: &mut [Handoff]) {
+    let mut start = 0;
+    while start < found.len() {
+        let end = found[start..]
+            .iter()
+            .position(|h| h.created != found[start].created || h.project != found[start].project)
+            .map_or(found.len(), |n| start + n);
+        let group = &mut found[start..end];
+        // Each move puts one handoff after its successor; a prev cycle in
+        // untrusted front matter is cut off by the pass cap.
+        for _ in 0..group.len() {
+            let misplaced = (0..group.len()).find_map(|i| {
+                let id = &group[i].id;
+                (i + 1..group.len())
+                    .rev()
+                    .find(|&j| !id.is_empty() && group[j].prev == *id)
+                    .map(|j| (i, j))
+            });
+            let Some((i, j)) = misplaced else { break };
+            group[i..=j].rotate_left(1);
+        }
+        start = end;
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]

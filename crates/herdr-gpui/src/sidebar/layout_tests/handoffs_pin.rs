@@ -2,12 +2,8 @@
 #![allow(clippy::expect_used)]
 
 use super::handoff_copy::click;
-use super::handoffs::{handoff, texts, window};
+use super::handoffs::{handoff, window};
 use crate::handoffs::Handoff;
-use gpui::VisualTestContext;
-
-const CLOSED: &str = "\u{1f512}";
-const OPEN: &str = "\u{1f513}";
 
 fn picked(id: &str, project: &str, created: &str) -> Handoff {
     Handoff {
@@ -25,14 +21,9 @@ fn list() -> Vec<Handoff> {
     ]
 }
 
-/// Whether any row shows `glyph` (the probe keys on distinct text).
-fn shows(cx: &mut VisualTestContext, glyph: &str) -> bool {
-    texts(cx).iter().any(|t| t == glyph)
-}
-
 #[gpui::test]
 fn every_row_has_an_open_lock_until_it_is_pinned(cx: &mut gpui::TestAppContext) {
-    let (_view, cx) = window(cx, None, list());
+    let (view, cx) = window(cx, None, list());
     click(cx, "handoffs-history-toggle");
     for selector in [
         "handoff-row-pin-0",
@@ -41,8 +32,7 @@ fn every_row_has_an_open_lock_until_it_is_pinned(cx: &mut gpui::TestAppContext) 
     ] {
         assert!(cx.debug_bounds(selector).is_some(), "{selector}");
     }
-    assert!(shows(cx, OPEN));
-    assert!(!shows(cx, CLOSED));
+    view.read_with(cx, |view, _| assert!(view.handoffs.pinned.is_empty()));
     let pin = cx.debug_bounds("handoff-row-pin-0").expect("pin");
     let row = cx.debug_bounds("handoff-row-0").expect("row");
     let id = cx.debug_bounds("handoff-row-x-0").expect("x");
@@ -67,7 +57,6 @@ fn clicking_the_lock_pins_without_copying_the_path(cx: &mut gpui::TestAppContext
         assert_eq!(ids, vec!["b-new", "a-new"]);
         assert_eq!(view.handoffs.pinned.len(), 1);
     });
-    assert!(shows(cx, CLOSED) && shows(cx, OPEN));
     // The pinned row is now first, and clicking its lock unpins.
     click(cx, "handoff-row-pin-0");
     view.read_with(cx, |view, _| {
@@ -86,5 +75,5 @@ fn a_pinned_history_row_stays_in_history_and_keeps_its_lock(cx: &mut gpui::TestA
         assert_eq!(view.handoffs.board.active.len(), 2);
         assert_eq!(view.handoffs.board.history[0].handoff.id, "c-pick");
     });
-    assert!(shows(cx, CLOSED));
+    view.read_with(cx, |view, _| assert_eq!(view.handoffs.pinned.len(), 1));
 }
