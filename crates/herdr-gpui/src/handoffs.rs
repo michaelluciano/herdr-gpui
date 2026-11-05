@@ -12,7 +12,7 @@ mod target;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use classify::{Shelf, classify, current};
+pub(crate) use classify::{Shelf, classify};
 pub(crate) use line::detail;
 pub(crate) use list::Handoff;
 #[cfg(test)]

@@ -16,9 +16,7 @@ pub(crate) const MAX_READ: usize = 4096;
 pub(crate) const MAX_VALUE: usize = 120;
 
 /// The front matter keys read. Every other key is ignored.
-const KEYS: [&str; 9] = [
-    "branch",
-    "cwd",
+const KEYS: [&str; 7] = [
     "id",
     "created",
     "status",
@@ -46,10 +44,6 @@ pub(crate) struct Handoff {
     pub(crate) prev: String,
     /// Who claimed the handoff, empty when unclaimed.
     pub(crate) claimed_by: String,
-    /// The branch it was written on, empty when not given.
-    pub(crate) branch: String,
-    /// The directory it was written in, empty when not given.
-    pub(crate) cwd: String,
 }
 
 /// Every `<root>/*/sessions/*.md` handoff with a `status` key, newest first.
@@ -145,8 +139,6 @@ fn read_handoff(path: PathBuf, project: &str) -> Option<Handoff> {
         parent: value("parent"),
         prev: value("prev"),
         claimed_by: value("claimed_by"),
-        branch: value("branch"),
-        cwd: value("cwd"),
         path,
     })
 }

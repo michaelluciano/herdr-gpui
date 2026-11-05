@@ -126,23 +126,23 @@ fn a_created_tie_in_one_session_keeps_the_path_first_one() {
 }
 
 #[test]
-fn handoffs_without_a_session_id_never_group() {
+fn handoffs_in_different_projects_never_supersede_each_other() {
     let board = classify(vec![
         fixture("x", "p", "2026-10-02", "open"),
-        fixture("y", "p", "2026-10-01", "open"),
+        fixture("y", "q", "2026-10-01", "open"),
     ]);
     assert_eq!(split(&board), (vec!["x", "y"], Vec::new()));
 }
 
 #[test]
 fn claimed_consumed_or_claimed_by_hides_as_picked_up() {
-    let claimed = fixture("a", "p", "2026-10-04", "claimed");
-    let consumed = fixture("b", "p", "2026-10-03", "consumed");
+    let claimed = fixture("a", "p1", "2026-10-04", "claimed");
+    let consumed = fixture("b", "p2", "2026-10-03", "consumed");
     let claimed_by = Handoff {
         claimed_by: "uuid".into(),
-        ..fixture("c", "p", "2026-10-02", "open")
+        ..fixture("c", "p3", "2026-10-02", "open")
     };
-    let plain = fixture("d", "p", "2026-10-01", "open");
+    let plain = fixture("d", "p4", "2026-10-01", "open");
     let board = classify(vec![claimed, consumed, claimed_by, plain]);
     assert_eq!(
         split(&board),
