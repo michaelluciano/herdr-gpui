@@ -51,7 +51,7 @@ fn the_pin_ink_is_accent_and_solid_when_pinned_and_a_faint_muted_when_not() {
         }
         assert_eq!(pinned_opacity, 1.0);
         assert_eq!(open, theme.muted);
-        assert!(open_opacity < 0.5, "the open lock recedes: {open_opacity}");
+        assert!(open_opacity <= 0.6, "the open lock recedes: {open_opacity}");
         assert_ne!(pinned, open, "colours differ");
         assert_ne!(pinned_opacity, open_opacity, "opacities differ");
     }

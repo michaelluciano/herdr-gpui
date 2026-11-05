@@ -4,6 +4,7 @@
 use super::handoff_copy::click;
 use super::handoffs::{handoff, window};
 use crate::handoffs::Handoff;
+use gpui::px;
 
 fn picked(id: &str, project: &str, created: &str) -> Handoff {
     Handoff {
@@ -76,4 +77,21 @@ fn a_pinned_history_row_stays_in_history_and_keeps_its_lock(cx: &mut gpui::TestA
         assert_eq!(view.handoffs.board.history[0].handoff.id, "c-pick");
     });
     view.read_with(cx, |view, _| assert_eq!(view.handoffs.pinned.len(), 1));
+}
+
+#[gpui::test]
+fn the_padlock_svg_has_its_own_ten_pixel_bounds_inside_the_lock_control(
+    cx: &mut gpui::TestAppContext,
+) {
+    let (_view, cx) = window(cx, None, list());
+    let check = |cx: &mut gpui::VisualTestContext| {
+        let pin = cx.debug_bounds("handoff-row-pin-1").expect("pin");
+        let icon = cx.debug_bounds("handoff-row-pin-icon-1").expect("icon");
+        assert!(icon.size.width > px(0.) && icon.size.height > px(0.));
+        assert_eq!((icon.size.width, icon.size.height), (px(10.), px(10.)));
+        assert!(pin.contains(&icon.origin) && pin.contains(&icon.bottom_right()));
+    };
+    check(cx);
+    click(cx, "handoff-row-pin-1");
+    check(cx);
 }

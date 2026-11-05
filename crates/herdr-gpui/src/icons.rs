@@ -365,6 +365,13 @@ mod tests {
         }
     }
 
+    #[test]
+    fn the_handoff_padlocks_resolve_through_the_asset_source() {
+        for path in ["icons/lock.svg", "icons/lock-open.svg"] {
+            assert!(Icons.load(path).unwrap().is_some(), "{path}");
+        }
+    }
+
     /// Herdr's `agent_label` values, copied from `src/detect/mod.rs` at
     /// herdrdev/herdr 65e35a38, plus the canonical native Omo identity.
     const HERDR_AGENT_LABELS: &[&str] = &[

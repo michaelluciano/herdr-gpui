@@ -33,7 +33,7 @@ const LOCK_OPEN: &str = "icons/lock-open.svg";
 /// The padlock's side, a little under the row's text height.
 const LOCK_SIZE: f32 = 10.;
 /// How faint the open padlock is until the pointer is over it.
-const LOCK_OPEN_OPACITY: f32 = 0.45;
+const LOCK_OPEN_OPACITY: f32 = 0.6;
 
 /// How quiet the header's `all N` toggle is until the pointer is over it.
 const HISTORY_TOGGLE_OPACITY: f32 = 0.75;
@@ -354,6 +354,7 @@ impl HerdrWindow {
             (LOCK_OPEN, format!("Pin handoff {}", handoff.id))
         };
         let (ink, opacity) = pin_ink(theme, pinned);
+        let pin_group = SharedString::from(format!("{prefix}-pin-group-{index}"));
         // Centred on the row's first line, whatever the row's height.
         let pin = div()
             .id((prefix, index + PIN_OFFSET))
@@ -367,15 +368,24 @@ impl HerdrWindow {
             .items_center()
             .px(px(2.))
             .cursor_pointer()
-            .text_color(rgb(ink))
+            .group(pin_group.clone())
             .opacity(opacity)
-            .hover(|style| style.text_color(rgb(theme.foreground)).opacity(1.0))
+            .hover(|style| style.opacity(1.0))
             .on_click(cx.listener(move |this, _, _, cx| {
                 cx.stop_propagation();
                 toggle_pin(this, pin_path.clone(), cx);
             }))
-            // The svg takes its tint from the control, so the hover can change it.
-            .child(svg().path(glyph).size(px(LOCK_SIZE)).flex_none());
+            // An svg paints with its own text colour, not the control's.
+            .child(
+                svg()
+                    .debug_selector(|| format!("{prefix}-pin-icon-{index}"))
+                    .path(glyph)
+                    .w(px(LOCK_SIZE))
+                    .h(px(LOCK_SIZE))
+                    .flex_none()
+                    .text_color(rgb(ink))
+                    .group_hover(pin_group, |style| style.text_color(rgb(theme.foreground))),
+            );
         let pin = self.chrome_stop(Region::Sidebar, pin);
         let group = SharedString::from(format!("{prefix}-group-{index}"));
         // Hidden by opacity, not removed: it keeps its width and stays
