@@ -322,3 +322,70 @@ fn a_pane_on_an_ssh_host_has_no_file_links(cx: &mut gpui::TestAppContext) {
     modifier_click(cx, position, Modifiers::secondary_key());
     assert!(cx.opened_url().is_none());
 }
+
+/// Cell `col` of `text`, found by its first occurrence.
+fn column_of(text: &str, word: &str) -> u16 {
+    text.find(word).unwrap() as u16
+}
+
+#[gpui::test]
+fn a_bare_relative_path_in_a_sentence_links_and_opens_under_the_pane_directory(
+    cx: &mut gpui::TestAppContext,
+) {
+    let root = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(root.path().join("docs/gates")).unwrap();
+    std::fs::write(root.path().join("docs/gates/G1.md"), "# G1").unwrap();
+    std::fs::create_dir(root.path().join("assets")).unwrap();
+    std::fs::write(root.path().join("assets/x.png"), "png").unwrap();
+    let text = "I opened docs/gates/G1.md in your default app";
+    let (view, cx) = window(text, root.path(), cx);
+    let doc = at(&view, cx, column_of(text, "gates") + 2);
+    cx.simulate_mouse_move(doc, None, Modifiers::secondary_key());
+    cx.run_until_parked();
+    view.read_with(cx, |view, _| {
+        let link = view.hovered_local_link().unwrap();
+        assert_eq!((link.row, link.columns.clone()), (0, 9..25));
+    });
+    let alt = Modifiers {
+        alt: true,
+        ..Modifiers::secondary_key()
+    };
+    modifier_click(cx, doc, alt);
+    let real = real_path(&root.path().join("docs/gates/G1.md")).unwrap();
+    let expected = url::Url::from_file_path(real).unwrap();
+    assert_eq!(cx.opened_url().as_deref(), Some(expected.as_str()));
+}
+
+#[gpui::test]
+fn a_bare_png_path_links_and_a_missing_one_does_not(cx: &mut gpui::TestAppContext) {
+    let root = tempfile::tempdir().unwrap();
+    std::fs::create_dir(root.path().join("assets")).unwrap();
+    std::fs::write(root.path().join("assets/x.png"), "png").unwrap();
+    let text = "wrote assets/x.png and assets/gone.png today";
+    let (view, cx) = window(text, root.path(), cx);
+    let found = at(&view, cx, column_of(text, "x.png"));
+    let missing = at(&view, cx, column_of(text, "gone"));
+    cx.simulate_mouse_move(found, None, Modifiers::secondary_key());
+    cx.run_until_parked();
+    view.read_with(cx, |view, _| assert!(view.hovered_local_link().is_some()));
+    cx.simulate_mouse_move(missing, None, Modifiers::secondary_key());
+    cx.run_until_parked();
+    view.read_with(cx, |view, _| assert!(view.hovered_local_link().is_none()));
+}
+
+#[gpui::test]
+fn a_relative_path_is_not_a_link_when_the_pane_runs_above_the_project(
+    cx: &mut gpui::TestAppContext,
+) {
+    // The reported case: the pane's process (Claude Code) runs in the home
+    // directory, while the project it names paths in, `kb/`, lies below it.
+    let home = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(home.path().join("kb/docs/gates")).unwrap();
+    std::fs::write(home.path().join("kb/docs/gates/G1.md"), "# G1").unwrap();
+    let text = "I opened docs/gates/G1.md in your default app";
+    let (view, cx) = window(text, home.path(), cx);
+    let doc = at(&view, cx, column_of(text, "gates") + 2);
+    cx.simulate_mouse_move(doc, None, Modifiers::secondary_key());
+    cx.run_until_parked();
+    view.read_with(cx, |view, _| assert!(view.hovered_local_link().is_none()));
+}
