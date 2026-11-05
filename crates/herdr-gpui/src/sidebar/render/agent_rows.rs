@@ -6,7 +6,7 @@ use crate::{
     agent_activity::Tone,
     sidebar::{
         Indicators, agent_name,
-        agents::{agent_place, pane_name, state_label, status_text},
+        agents::{agent_place, pane_name, state_label, status_text, tab_position},
         cell::{AgentRow, Cell, RowContext, RowData, layout_for},
         layout::SidebarLook,
         line_height, tokens, wash,
@@ -164,6 +164,7 @@ impl HerdrWindow {
                 status: agent.agent_status,
                 place,
                 pane,
+                tab: place.and_then(|_| tab_position(agent, snapshot)),
                 // A Claude agent's activity label shows whatever the rows
                 // configure, as it replaces nothing a layout asked for.
                 status_text: (activity.is_some()

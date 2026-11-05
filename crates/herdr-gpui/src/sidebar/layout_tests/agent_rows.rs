@@ -51,9 +51,19 @@ fn agent_icons_follow_names_and_reserve_narrow_label_width(cx: &mut gpui::TestAp
                         assert!(rendered.ends_with('…'));
                     }
                 });
-                for (icon, name, column) in [
-                    ("agent-icon-agent-p0", "detail-agent-p0", "column-agent-p0"),
-                    ("agent-icon-agent-p1", "name-agent-p1", "column-agent-p1"),
+                for (icon, name, column, name_fills) in [
+                    (
+                        "agent-icon-agent-p0",
+                        "agent-sep-agent-p0",
+                        "column-agent-p0",
+                        false,
+                    ),
+                    (
+                        "agent-icon-agent-p1",
+                        "name-agent-p1",
+                        "column-agent-p1",
+                        true,
+                    ),
                 ] {
                     let icon = cx.debug_bounds(icon).unwrap();
                     let name = cx.debug_bounds(name).unwrap();
@@ -61,7 +71,12 @@ fn agent_icons_follow_names_and_reserve_narrow_label_width(cx: &mut gpui::TestAp
                     assert_eq!(icon.size, size(px(12.), px(12.)));
                     assert_eq!(icon.left(), column.left());
                     assert_eq!(name.left(), icon.right() + px(4.));
-                    assert_eq!(name.right(), column.right());
+                    // An orphan's name fills its line; a placed agent's separator
+                    // follows its icon on the details line.
+                    assert!(name.right() <= column.right());
+                    if name_fills {
+                        assert_eq!(name.right(), column.right());
+                    }
                     assert_eq!(icon.center().y, name.center().y);
                     assert!(icon.right() <= column.right());
                 }
@@ -207,7 +222,10 @@ fn agent_status_words_stay_inside_narrow_rows(cx: &mut gpui::TestAppContext) {
             });
             let sidebar = cx.debug_bounds("sidebar").unwrap();
             for key in ["status-agent-p0", "status-agent-p1"] {
-                let status = cx.debug_bounds(key).unwrap();
+                // Nothing is left for it once the icon, `|` and tab take the line.
+                let Some(status) = cx.debug_bounds(key) else {
+                    continue;
+                };
                 assert!(
                     status.right() <= sidebar.right(),
                     "{density:?} {width} {font}: {key} {status:?} past {sidebar:?}"
@@ -365,10 +383,7 @@ fn hiding_agents_reclaims_sidebar_height(cx: &mut gpui::TestAppContext) {
                 full_draw(window, cx).clear(cx);
             });
             cx.update(|_, cx| {
-                assert_eq!(
-                    cx.global::<TextProbes>().0.contains_key("Claude Code"),
-                    show_agents
-                );
+                assert_eq!(cx.global::<TextProbes>().0.contains_key("|"), show_agents);
             });
             let spaces = cx.debug_bounds("spaces-scroll").unwrap();
             if show_agents {
@@ -428,13 +443,11 @@ fn hiding_agents_preserves_scrolled_multi_endpoint_lists(cx: &mut gpui::TestAppC
                 cx.default_global::<TextProbes>().0.clear();
                 window.refresh();
                 full_draw(window, cx).clear(cx);
-                for label in ["Claude Code", "Remote Agent"] {
-                    assert_eq!(
-                        cx.global::<TextProbes>().0.contains_key(label),
-                        show_agents,
-                        "{label}"
-                    );
-                }
+                assert_eq!(
+                    cx.global::<TextProbes>().0.contains_key("|"),
+                    show_agents,
+                    "agent rows' separator"
+                );
                 let view = view.read(cx);
                 for scroll in &view.sidebar_scroll {
                     assert_eq!(scroll.offset(), point(px(0.), px(-40.)));

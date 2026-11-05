@@ -116,6 +116,8 @@ pub(super) struct AgentRow<'a> {
     /// Its pane's name: Rename's label, else the pane's title, and never the
     /// agent name again. Safe, bounded text.
     pub(super) pane: Option<String>,
+    /// Its tab's 1-based position in the workspace, when the snapshot lists it.
+    pub(super) tab: Option<usize>,
     /// The daemon's `state_text` word when its sidebar config asks for it, so
     /// the GUI and the TUI name the status the same way: the agent's own
     /// state label when its integration set one.

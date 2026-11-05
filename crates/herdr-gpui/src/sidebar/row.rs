@@ -6,6 +6,7 @@
 use super::layout_tests;
 use super::{
     ARROW_RESERVE, ICON_RESERVE, STATUS_WIDTH,
+    agent_line::{self, AgentLine},
     agents::{Indicators, status_indicator},
     cell::{RowContext, RowState},
     glyph_width, line_height, segment_budgets,
@@ -424,6 +425,9 @@ pub(super) fn row(
     // Overrides the status word's color, which is the dot's otherwise.
     status_word_color: Option<u32>,
     lines: &[Vec<ResolvedToken>],
+    // An agent's second line in place of its detail text: the details move
+    // under the name instead of beside it.
+    agent_line: Option<AgentLine<'_>>,
     cx: &RowContext<'_>,
 ) -> Div {
     let (font, theme, look, width) = (cx.font, cx.theme, cx.look, cx.width);
@@ -506,10 +510,15 @@ pub(super) fn row(
     // The status word keeps its own trailing column, so the label yields to it
     // the same way it yields to a badge, and like the badge it is clipped to
     // the room left rather than painting past the row.
+    // An agent's name keeps twelve characters before its status clips.
+    let min_name = match kind {
+        RowKind::Agent(_) => 12. * glyph_width(font) + agent_icon_size(font).1,
+        RowKind::Workspace => 0.,
+    };
     let status_width = status_text.map_or(0., |text| {
         (text.width() as f32 * glyph_width(font))
             .ceil()
-            .min((available - pr_reserve - gap).max(0.))
+            .min((available - pr_reserve - gap - min_name).max(0.))
     });
     let status_reserve = if status_text.is_some() {
         status_width + gap
@@ -651,6 +660,15 @@ pub(super) fn row(
                                 ),
                         )
                         .when(show_detail, |column| {
+                            if let (Some(parts), Some(icon)) = (agent_line, agent_icon) {
+                                return column.child(agent_line::line(
+                                    key,
+                                    icon,
+                                    parts,
+                                    detail_limit,
+                                    (font, detail_color),
+                                ));
+                            }
                             let detail_x =
                                 agent_detail.map_or(0., |_| agent_reserve.min(detail_limit));
                             let room = (detail_limit - detail_x).max(0.);
@@ -744,12 +762,12 @@ pub(super) fn row(
         })
 }
 
-fn agent_icon_size(font: &FontConfig) -> (f32, f32) {
+pub(super) fn agent_icon_size(font: &FontConfig) -> (f32, f32) {
     let size = line_height(font).min(12.);
     (size, size + 4.)
 }
 
-fn agent_mark(
+pub(super) fn agent_mark(
     key: &str,
     icon: crate::icons::AgentIcon,
     size: f32,

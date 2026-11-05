@@ -375,7 +375,10 @@ impl RowLayout for Superset {
                     .text_color(rgb(color)),
                 agent.name,
                 glyph_at(cx.font, cx.font.size),
-                0.4,
+                parts::lead_share(
+                    cx.look.content_width(cx.width),
+                    glyph_at(cx.font, cx.font.size),
+                ),
             )
             .when_some(agent.pane, |line, pane| {
                 line.label(

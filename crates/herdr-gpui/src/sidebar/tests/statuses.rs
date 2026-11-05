@@ -111,6 +111,7 @@ fn wide_mark_rows_keep_layout_density_and_expand_child_indent() {
                     None,
                     None,
                     &[],
+                    None,
                     &super::super::cell::RowContext {
                         indicators,
                         font: &font,

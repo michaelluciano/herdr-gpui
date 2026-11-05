@@ -127,10 +127,7 @@ fn sidebar_split_preserves_independent_scrolling_and_agents_toggle(cx: &mut gpui
             cx.default_global::<TextProbes>().0.clear();
             window.refresh();
             full_draw(window, cx).clear(cx);
-            assert_eq!(
-                cx.global::<TextProbes>().0.contains_key("Claude Code"),
-                show_agents
-            );
+            assert_eq!(cx.global::<TextProbes>().0.contains_key("|"), show_agents);
         });
         view.read_with(cx, |view, _| {
             assert_eq!(view.sidebar_split, Some(split));

@@ -209,8 +209,22 @@ pub(super) fn agent_place<'a>(
     Some((workspace.label.as_str(), tab))
 }
 
-/// Upstream's default agent rows: host, workspace, tab, and pane name on the
-/// first line, the agent itself on the second. A pane whose workspace has gone
+/// The agent's tab as a person counts it: its 1-based position among its
+/// workspace's tabs, `None` when the snapshot does not list it.
+pub(super) fn tab_position(
+    agent: &ClientShellAgent,
+    snapshot: &ClientShellSnapshot,
+) -> Option<usize> {
+    snapshot
+        .tabs
+        .iter()
+        .filter(|tab| tab.workspace_id == agent.workspace_id)
+        .position(|tab| tab.tab_id == agent.tab_id)
+        .map(|index| index + 1)
+}
+
+/// Upstream's default agent rows: host, workspace and pane name on the
+/// first line (the tab is `[n]` on the second), the agent itself on the second. A pane whose workspace has gone
 /// leaves the agent to name the row, with the pane name beside it.
 pub(super) fn agent_labels<'a>(
     name: &'a str,
@@ -218,22 +232,17 @@ pub(super) fn agent_labels<'a>(
     host: Option<&'a str>,
     pane: Option<&'a str>,
 ) -> (Vec<(&'a str, bool)>, &'a str) {
-    let Some((workspace, tab)) = place else {
+    let Some((workspace, _)) = place else {
         let segments = [Some((name, true)), pane.map(|pane| (pane, false))];
         return (segments.into_iter().flatten().collect(), "");
     };
     // Only the workspace carries the row's weight: upstream paints the host and
     // tab around it in its secondary color. The pane name joins them there.
-    let segments = [
-        (host, false),
-        (Some(workspace), true),
-        (tab, false),
-        (pane, false),
-    ]
-    .into_iter()
-    .filter_map(|(text, primary)| Some((text?, primary)))
-    .filter(|(text, _)| !text.is_empty())
-    .collect();
+    let segments = [(host, false), (Some(workspace), true), (pane, false)]
+        .into_iter()
+        .filter_map(|(text, primary)| Some((text?, primary)))
+        .filter(|(text, _)| !text.is_empty())
+        .collect();
     (segments, name)
 }
 

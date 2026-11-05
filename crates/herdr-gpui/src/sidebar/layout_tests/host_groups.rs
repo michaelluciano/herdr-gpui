@@ -98,7 +98,7 @@ fn multi_host_rows_scope_duplicate_ids_and_keep_agents_when_host_collapses(
         // The remote workspace row folds away -- its branch goes with it -- while
         // its agent keeps naming the host it runs on.
         assert!(!cx.global::<TextProbes>().0.contains_key("remote branch"));
-        for part in ["Remote", "remote workspace", "tab 1"] {
+        for part in ["Remote", "remote workspace", "[1]"] {
             assert!(
                 cx.global::<TextProbes>().0.contains_key(part),
                 "{part}: {:?}",

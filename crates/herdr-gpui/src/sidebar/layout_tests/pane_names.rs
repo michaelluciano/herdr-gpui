@@ -242,7 +242,11 @@ fn a_name_that_repeats_the_agent_is_painted_once_in_every_layout(cx: &mut gpui::
             panes.iter().all(Option::is_none),
             "{mode:?} painted a pane label: {panes:?}"
         );
-        assert!(probes.contains_key("grok"), "{mode:?} lost the agent name");
+        // Herdr's rows show the agent as its icon alone.
+        assert!(
+            probes.contains_key("grok") || matches!(mode, LayoutMode::Classic { .. }),
+            "{mode:?} lost the agent name"
+        );
         // Painted text is keyed by string, so a second "grok" would hide behind
         // the agent name. Herdr has no pane label of its own: a pane segment on
         // its first line would add a separator and move the segments around it,

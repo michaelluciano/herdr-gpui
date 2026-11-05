@@ -21,6 +21,8 @@ use std::sync::Arc;
 #[cfg(test)]
 mod agent_activity_row;
 #[cfg(test)]
+mod agent_line;
+#[cfg(test)]
 mod agent_menu;
 #[cfg(test)]
 mod agent_rows;

@@ -362,7 +362,7 @@ impl RowLayout for Orca {
                     .text_color(rgb(color)),
                 agent.name,
                 glyph_at(font, font.size),
-                0.4,
+                parts::lead_share(inner(cx, 0.) - icon - GAP, glyph_at(font, font.size)),
             )
             .when_some(agent.pane, |line, pane| {
                 line.label(
