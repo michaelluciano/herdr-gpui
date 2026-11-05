@@ -35,8 +35,18 @@ const LOCK_SIZE: f32 = 10.;
 /// How faint the open padlock is until the pointer is over it.
 const LOCK_OPEN_OPACITY: f32 = 0.6;
 
-/// How quiet the header's `all N` toggle is until the pointer is over it.
-const HISTORY_TOGGLE_OPACITY: f32 = 0.75;
+/// The header's `all N` toggle: white while the section shows every handoff,
+/// the muted gray while it shows only the active ones, nudged in lightness
+/// only where a theme's gray falls under [`LOCK_CONTRAST`] (Catppuccin Latte's
+/// does).
+pub(super) fn toggle_ink(theme: &Theme, open: bool) -> u32 {
+    if open {
+        return theme.foreground;
+    }
+    let rail = theme.tokens().rail;
+    crate::contrast::ink(theme.muted, &[theme.background, rail], LOCK_CONTRAST)
+}
+
 /// Extra vertical padding of a row, for a little room between rows.
 const ROW_GAP: f32 = 2.;
 
@@ -304,9 +314,8 @@ impl HerdrWindow {
             .role(Role::Button)
             .aria_label(format!("All handoffs: {count}"))
             .cursor_pointer()
-            .text_color(rgb(self.theme.muted))
-            .opacity(HISTORY_TOGGLE_OPACITY)
-            .hover(|style| style.text_color(rgb(self.theme.foreground)).opacity(1.0))
+            .text_color(rgb(toggle_ink(&self.theme, open)))
+            .hover(|style| style.text_color(rgb(self.theme.foreground)))
             .on_click(cx.listener(|this, _, _, cx| {
                 cx.stop_propagation();
                 flip_history(this, cx);

@@ -2,7 +2,7 @@
 
 //! Active handoff rows sit on the sidebar's own background with white text,
 //! the detail line a step dimmer; history rows are gray.
-use super::super::handoffs::{pin_ink, row_colors};
+use super::super::handoffs::{pin_ink, row_colors, toggle_ink};
 use crate::{config::Theme, contrast::ratio, handoffs::Shelf};
 
 fn themes() -> Vec<Theme> {
@@ -66,6 +66,25 @@ fn the_pinned_lock_keeps_three_to_one_against_the_background() {
             let seen = ratio(color, background);
             println!("pinned lock {color:06x} on {background:06x}: {seen:.2}:1");
             assert!(seen >= 3.0, "contrast {seen} on {background:x}");
+        }
+    }
+}
+
+#[test]
+fn the_all_toggle_is_white_while_it_shows_all_and_gray_while_it_does_not() {
+    for theme in themes() {
+        assert_eq!(toggle_ink(&theme, true), theme.foreground);
+        // The theme's gray, unless it needs a nudge to reach 3:1.
+        if ratio(theme.muted, theme.background) >= 3.0 {
+            assert_eq!(toggle_ink(&theme, false), theme.muted);
+        }
+        assert_ne!(toggle_ink(&theme, false), toggle_ink(&theme, true));
+        for open in [true, false] {
+            let ink = toggle_ink(&theme, open);
+            for background in [theme.background, theme.tokens().rail] {
+                let seen = ratio(ink, background);
+                assert!(seen >= 3.0, "open {open}: {seen} on {background:x}");
+            }
         }
     }
 }
