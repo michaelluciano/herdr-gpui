@@ -206,7 +206,10 @@ impl RowLayout for Minimal {
                 name(&agent.key, kind, state, false, theme),
                 agent.name,
                 parts::glyph_at(font, font.size),
-                0.4,
+                parts::lead_share(
+                    cx.look.content_width(cx.width),
+                    parts::glyph_at(font, font.size),
+                ),
             )
             .when_some(agent.pane, |line, pane| {
                 line.label(
@@ -222,7 +225,9 @@ impl RowLayout for Minimal {
                 line.keep(
                     div()
                         .debug_selector(|| format!("status-{}", agent.key))
-                        .text_color(rgb(cx.indicators.color(agent.status))),
+                        .text_color(rgb(agent
+                            .status_color
+                            .unwrap_or_else(|| cx.indicators.color(agent.status)))),
                     text,
                     parts::glyph_at(font, font.size),
                     0.3,

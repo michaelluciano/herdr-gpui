@@ -72,7 +72,14 @@ fn check_layouts(modes: &[crate::config::LayoutMode], cx: &mut gpui::TestAppCont
                     cx.default_global::<TextProbes>().0.clear();
                     full_draw(window, cx).clear(cx);
                     let probes = &cx.global::<TextProbes>().0;
-                    for text in ["herdr", "agent-launcher", "Claude Code"] {
+                    // The default rows name the agent by its icon alone, with the
+                    // tab's number beside it; the others still spell its name.
+                    let agent_text = if matches!(mode, LayoutMode::Classic { .. }) {
+                        "[1]"
+                    } else {
+                        "Claude Code"
+                    };
+                    for text in ["herdr", "agent-launcher", agent_text] {
                         assert!(probes.contains_key(text), "{context}: {text} missing");
                     }
                     for (text, (bounds, _, glyphs)) in probes {
@@ -236,7 +243,12 @@ fn sidebar_densities_keep_details_and_badges_within_their_rows(cx: &mut gpui::Te
                     for text in ["worktree/sidebar-child", "+234", "-567"] {
                         assert_eq!(probes.contains_key(text), comfortable, "{text}");
                     }
-                    for text in ["Claude Code", "#7"] {
+                    let agent_text = if matches!(mode, LayoutMode::Classic { .. }) {
+                        "[1]"
+                    } else {
+                        "Claude Code"
+                    };
+                    for text in [agent_text, "#7"] {
                         assert!(probes.contains_key(text), "{text}");
                     }
                 });
@@ -275,7 +287,7 @@ fn sidebar_densities_keep_details_and_badges_within_their_rows(cx: &mut gpui::Te
                     (
                         "row-agent-p0",
                         "name-agent-p0",
-                        "detail-agent-p0",
+                        "agent-sep-agent-p0",
                         "highlight-agent-p0",
                     ),
                 ] {
@@ -307,7 +319,7 @@ fn sidebar_densities_keep_details_and_badges_within_their_rows(cx: &mut gpui::Te
                     agent.size.height,
                     px(2. * line + 2. * vertical_padding + spacing)
                 );
-                assert!(cx.debug_bounds("detail-agent-p0").is_some());
+                assert!(cx.debug_bounds("agent-sep-agent-p0").is_some());
                 let row = cx.debug_bounds("row-sidebar-child").unwrap();
                 let badge = cx.debug_bounds("pr-sidebar-child").unwrap();
                 assert_eq!(badge.right(), row.right() - px(padding));

@@ -262,6 +262,16 @@ impl<'a> Line<'a> {
     }
 }
 
+/// The share of a one-line row its name keeps ahead of every label: forty
+/// percent, or twelve characters where those are more, so the status clips
+/// before the name drops below them.
+pub(in crate::sidebar) fn lead_share(width: f32, glyph: f32) -> f32 {
+    if width <= 0. {
+        return 0.4;
+    }
+    (12. * glyph / width).clamp(0.4, 1.)
+}
+
 /// Glyph width at `size`, scaled from the sidebar font's.
 pub(super) fn glyph_at(font: &FontConfig, size: f32) -> f32 {
     glyph_width(font) * size / font.size

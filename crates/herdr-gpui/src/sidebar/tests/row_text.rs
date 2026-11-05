@@ -35,7 +35,8 @@ fn agent_rows_name_their_place_then_their_agent() {
     agent.agent = Some("claude".into());
     agent.title = Some("Fix sidebar".into());
     let agent = snapshot.agents[0].clone();
-    // Host first when there is one, then the workspace, then the tab. Only
+    // Host first when there is one, then the workspace; the tab is `[n]` on
+    // the second line. Only
     // the workspace is primary; upstream mutes what sits around it.
     fn labels<'a>(
         snapshot: &'a ClientShellSnapshot,
@@ -46,23 +47,18 @@ fn agent_rows_name_their_place_then_their_agent() {
     }
     assert_eq!(
         labels(&snapshot, None),
-        (vec![("herdr", true), ("tab 1", false)], "Claude Code")
+        (vec![("herdr", true)], "Claude Code")
     );
     assert_eq!(
         labels(&snapshot, Some("remote")),
-        (
-            vec![("remote", false), ("herdr", true), ("tab 1", false)],
-            "Claude Code"
-        )
+        (vec![("remote", false), ("herdr", true)], "Claude Code")
     );
     // One unnamed tab is noise, so only its workspace shows.
     snapshot.tabs.retain(|tab| tab.tab_id == "t0");
     assert_eq!(labels(&snapshot, None).0, vec![("herdr", true)]);
+    // A named tab leaves the first line too: its number sits on the second.
     snapshot.tabs[0].custom_label = true;
-    assert_eq!(
-        labels(&snapshot, None).0,
-        vec![("herdr", true), ("tab 1", false)]
-    );
+    assert_eq!(labels(&snapshot, None).0, vec![("herdr", true)]);
     // The agent name falls back through the same order as upstream.
     for (display, name, kind, title, expected) in [
         (None, Some("review"), Some("claude"), None, "review"),
@@ -192,7 +188,10 @@ fn cells_hand_their_state_and_data_to_the_layout() {
             status: AgentStatus::Working,
             place: None,
             pane: None,
+            tab: None,
+            status_icon: None,
             status_text: None,
+            status_color: None,
             lines: vec![],
         }),
         &cx,

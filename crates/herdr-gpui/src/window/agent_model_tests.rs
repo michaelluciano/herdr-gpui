@@ -96,6 +96,33 @@ fn the_bar_shows_the_focused_agents_model_only(cx: &mut TestAppContext) {
     assert!(!model_segment_drawn(cx));
 }
 
+/// The bar is as tall as the sidebar's device footer, so the model can sit
+/// above its effort in the room that gives.
+#[gpui::test]
+fn the_bar_matches_the_device_footer_and_stacks_model_over_effort(cx: &mut TestAppContext) {
+    let (view, cx) = cx.add_window_view(fixture_window);
+    set_first_agent(
+        &view,
+        true,
+        &[("model", "Opus 5.5"), ("effort", "high")],
+        cx,
+    );
+    assert!(model_segment_drawn(cx));
+    let bar = cx.debug_bounds("connection-status").unwrap();
+    assert_eq!(
+        bar.size.height,
+        gpui::px(crate::sidebar::DEVICE_FOOTER_HEIGHT)
+    );
+    let model = cx.debug_bounds("agent-model-name").unwrap();
+    let effort = cx.debug_bounds("agent-model-effort").unwrap();
+    assert!(model.bottom() <= effort.top(), "{model:?} over {effort:?}");
+
+    // Without an effort the model is alone.
+    set_first_agent(&view, true, &[("model", "gpt-5")], cx);
+    assert!(model_segment_drawn(cx));
+    assert!(cx.debug_bounds("agent-model-effort").is_none());
+}
+
 fn set_first_agent_kind(view: &gpui::Entity<HerdrWindow>, kind: &str, cx: &mut VisualTestContext) {
     cx.update(|_, cx| {
         view.update(cx, |view, cx| {

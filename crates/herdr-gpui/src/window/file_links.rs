@@ -40,7 +40,9 @@ pub(crate) struct FileLink {
     pub(crate) path: String,
     pub(crate) line: Option<u32>,
     pub(crate) pane_id: String,
-    pub(crate) cwd: Option<String>,
+    /// The directories a relative path may be under, in the order tried: the
+    /// pane's foreground process, its shell, then its Claude session.
+    pub(crate) cwds: Vec<String>,
     /// Whether an explicit hyperlink named the path. Such a path is a link
     /// whether or not its file is there, so a click on a missing one says
     /// so; a path read from printed text is a link only when it exists.
@@ -70,8 +72,9 @@ enum Opened {
 
 impl FileLink {
     /// The absolute path this link names: `~/` under `home`, and a relative
-    /// path under the pane's working directory. `None` when either is
-    /// unknown.
+    /// path under the first of the pane's directories that holds it, else
+    /// under the first of them. `None` when `~` or every directory is
+    /// unknown. A relative path reads the disk, so this runs off the UI thread.
     fn resolve(&self, home: Option<&Path>) -> Option<PathBuf> {
         let path = Path::new(&self.path);
         if let Ok(rest) = path.strip_prefix("~") {
@@ -80,8 +83,19 @@ impl FileLink {
         if path.is_absolute() {
             return Some(path.to_owned());
         }
-        let cwd = Path::new(self.cwd.as_deref()?);
-        cwd.is_absolute().then(|| cwd.join(path))
+        let mut candidates = self
+            .cwds
+            .iter()
+            .map(Path::new)
+            .filter(|cwd| cwd.is_absolute())
+            .map(|cwd| cwd.join(path));
+        let first = candidates.next()?;
+        if real_path(&first).is_ok() {
+            return Some(first);
+        }
+        candidates
+            .find(|candidate| real_path(candidate).is_ok())
+            .or(Some(first))
     }
 }
 
@@ -245,15 +259,26 @@ impl HerdrWindow {
         else {
             return None;
         };
-        let cwd = self.live.snapshot.as_ref().and_then(|snapshot| {
-            let pane = snapshot.panes.iter().find(|pane| pane.pane_id == pane_id)?;
-            pane.foreground_cwd.clone().or_else(|| pane.cwd.clone())
-        });
+        let mut cwds: Vec<String> = Vec::new();
+        let pane = self
+            .live
+            .snapshot
+            .as_ref()
+            .and_then(|snapshot| snapshot.panes.iter().find(|pane| pane.pane_id == pane_id));
+        let session = self.agent_activity.session_cwd(&pane_id).map(str::to_owned);
+        let known = pane
+            .into_iter()
+            .flat_map(|pane| [&pane.foreground_cwd, &pane.cwd]);
+        for cwd in known.flatten().cloned().chain(session) {
+            if !cwds.contains(&cwd) {
+                cwds.push(cwd);
+            }
+        }
         Some(FileLink {
             path,
             line,
             pane_id,
-            cwd,
+            cwds,
             explicit,
         })
     }

@@ -3,6 +3,7 @@
 
 mod accessibility;
 mod activity;
+mod agent_line;
 mod agents;
 mod animated;
 mod cell;

@@ -80,7 +80,7 @@ fn the_history_control_lists_shelved_rows_below_the_active_ones(cx: &mut gpui::T
 
     click(cx, "handoffs-history-toggle");
     assert!(view.read_with(cx, |view, _| view.handoffs.history_open));
-    let last_active = cx.debug_bounds("handoff-row-1").expect("no active row");
+    let last_active = cx.debug_bounds("handoff-row-0").expect("no active row");
     let first_shelved = cx
         .debug_bounds("handoff-history-row-0")
         .expect("no history row");
@@ -89,15 +89,18 @@ fn the_history_control_lists_shelved_rows_below_the_active_ones(cx: &mut gpui::T
     assert!(cx.debug_bounds("handoff-history-row-2").is_none());
 
     let shown = texts(cx);
+    let line = |id: &str, shelf: &str| {
+        shown
+            .iter()
+            .any(|t| t.starts_with(&format!("{id} \u{b7} ")) && t.ends_with(shelf))
+    };
+    assert!(line("S37", "\u{b7} picked up"), "{shown:?}");
+    assert!(line("S-old", "\u{b7} superseded"), "{shown:?}");
     assert!(
-        has(&shown, "kb \u{b7} 10-31 09:15 \u{b7} picked up"),
+        shown.iter().any(|t| t.starts_with("S-e8da4cd3 \u{b7} ")),
         "{shown:?}"
     );
-    assert!(
-        has(&shown, "remora \u{b7} 10-29 10:00 \u{b7} superseded"),
-        "{shown:?}"
-    );
-    assert!(has(&shown, "claude-setup \u{b7} 10-31 13:41"), "{shown:?}");
+    assert!(has(&shown, "kb"), "history rows lead with the project");
 }
 
 #[gpui::test]

@@ -375,7 +375,10 @@ impl RowLayout for Superset {
                     .text_color(rgb(color)),
                 agent.name,
                 glyph_at(cx.font, cx.font.size),
-                0.4,
+                parts::lead_share(
+                    cx.look.content_width(cx.width),
+                    glyph_at(cx.font, cx.font.size),
+                ),
             )
             .when_some(agent.pane, |line, pane| {
                 line.label(
@@ -404,7 +407,9 @@ impl RowLayout for Superset {
                     div()
                         .debug_selector(|| format!("status-{key}"))
                         .text_size(px(m.small))
-                        .text_color(rgb(cx.indicators.color(agent.status))),
+                        .text_color(rgb(agent
+                            .status_color
+                            .unwrap_or_else(|| cx.indicators.color(agent.status)))),
                     text,
                     m.glyph,
                     0.3,

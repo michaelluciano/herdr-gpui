@@ -50,9 +50,10 @@ fn right_clicking_a_row_opens_its_file_in_a_code_tab(cx: &mut gpui::TestAppConte
         handoff("S39-later", "kb", "2026-10-30"),
     ];
     let (view, cx) = window(cx, None, list);
-    let wanted = path_of(&view, cx, true, 1);
+    // The one row is the branch's newest handoff.
+    let wanted = path_of(&view, cx, true, 0);
 
-    right_click(cx, "handoff-row-1");
+    right_click(cx, "handoff-row-0");
 
     assert_eq!(code_paths(cx), [wanted]);
 }

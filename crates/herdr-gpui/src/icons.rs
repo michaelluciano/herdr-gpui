@@ -259,6 +259,7 @@ embedded_icons! {
     "globe.svg",
     "issue.svg",
     "keyboard.svg",
+    "lock-open.svg",
     "lock.svg",
     "more.svg",
     "network/tailscale.svg",
@@ -280,13 +281,33 @@ embedded_icons! {
     "shield.svg",
     "split.svg",
     "status-bar.svg",
+    "status-blocked.svg",
+    "status-brain.svg",
+    "status-hammer.svg",
     "status-orca-blocked.svg",
     "status-orca-working.svg",
+    "status-sleep.svg",
+    "status-subagents.svg",
+    "status-waiting.svg",
     "tabs.svg",
     "teleport-back.svg",
     "teleport.svg",
     "terminal.svg",
     "theme.svg",
+    "tool-ask.svg",
+    "tool-bash.svg",
+    "tool-edit.svg",
+    "tool-glob.svg",
+    "tool-grep.svg",
+    "tool-mcp.svg",
+    "tool-notebook.svg",
+    "tool-plan.svg",
+    "tool-read.svg",
+    "tool-skill.svg",
+    "tool-todo.svg",
+    "tool-webfetch.svg",
+    "tool-websearch.svg",
+    "tool-write.svg",
     "trash.svg",
     "user.svg",
     "vscode.svg",
@@ -361,6 +382,13 @@ mod tests {
         assert_eq!(unique.len(), listed.len());
         for (name, _) in STATUS_ICONS {
             assert!(listed.iter().any(|path| path.as_ref() == name), "{name}");
+        }
+    }
+
+    #[test]
+    fn the_handoff_padlocks_resolve_through_the_asset_source() {
+        for path in ["icons/lock.svg", "icons/lock-open.svg"] {
+            assert!(Icons.load(path).unwrap().is_some(), "{path}");
         }
     }
 

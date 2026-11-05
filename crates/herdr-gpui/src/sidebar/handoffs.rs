@@ -1,12 +1,15 @@
-//! The Handoffs section below the workspaces and agents lists: the active
-//! handoffs, and behind a header control the picked-up and superseded ones.
+//! The Handoffs section below the workspaces and agents lists: the newest
+//! unclaimed handoff of each project, and behind a header control every
+//! handoff: picked up, superseded and dismissed. Each row has an x that
+//! removes it from the list.
 
 use super::{
     accessibility::expandable, label_text, layout::SidebarLook, line_height, render::header_frame,
 };
 use crate::{
     HerdrWindow,
-    handoffs::{Handoff, Shelf, detail, target_for},
+    config::{Theme, mix},
+    handoffs::{Handoff, Shelf, detail, edited_label, target_for},
     window::{Flash, chrome_focus::Region},
 };
 use gpui::{ClipboardItem, prelude::*, *};
@@ -19,8 +22,104 @@ const CHEVRON_OPEN: &str = "\u{25be}";
 /// The chevron before the title while the body is folded.
 const CHEVRON_FOLDED: &str = "\u{25b8}";
 
+/// Keeps a row's remove control's element id apart from the row's own.
+const REMOVE_OFFSET: usize = 1_000_000;
+/// Keeps a row's lock control's element id apart from the others.
+const PIN_OFFSET: usize = 2_000_000;
+/// A closed padlock: the handoff is pinned.
+const LOCK_CLOSED: &str = "icons/lock.svg";
+/// An open padlock: the handoff is not pinned.
+const LOCK_OPEN: &str = "icons/lock-open.svg";
+/// The padlock's side, a little under the row's text height.
+const LOCK_SIZE: f32 = 10.;
+/// How faint the open padlock is until the pointer is over it.
+const LOCK_OPEN_OPACITY: f32 = 0.6;
+
+/// The header's `all N` toggle: white while the section shows every handoff,
+/// the muted gray while it shows only the active ones, nudged in lightness
+/// only where a theme's gray falls under [`LOCK_CONTRAST`] (Catppuccin Latte's
+/// does).
+pub(super) fn toggle_ink(theme: &Theme, open: bool) -> u32 {
+    if open {
+        return theme.foreground;
+    }
+    quiet_ink(theme)
+}
+
+/// The muted gray, nudged in lightness only where a theme's falls under
+/// [`LOCK_CONTRAST`] on the sidebar.
+fn quiet_ink(theme: &Theme) -> u32 {
+    let rail = theme.tokens().rail;
+    crate::contrast::ink(theme.muted, &[theme.background, rail], LOCK_CONTRAST)
+}
+
+/// The colour of a row's last-edit time.
+pub(super) fn edited_ink(theme: &Theme) -> u32 {
+    quiet_ink(theme)
+}
+
+/// The edit time's size against the row text.
+const EDITED_SCALE: f32 = 0.82;
+
+/// Extra vertical padding of a row, for a little room between rows.
+const ROW_GAP: f32 = 2.;
+
+/// The least contrast a pinned padlock keeps against the sidebar (WCAG's
+/// non-text minimum).
+const LOCK_CONTRAST: f32 = 3.1;
+
+/// The padlock's colour and opacity: the accent at full strength when pinned,
+/// nudged in lightness only where a theme's accent falls under
+/// [`LOCK_CONTRAST`] (Catppuccin Latte's pink does); the muted gray faded back
+/// when not.
+pub(super) fn pin_ink(theme: &Theme, pinned: bool) -> (u32, f32) {
+    if pinned {
+        let tokens = theme.tokens();
+        let ink = crate::contrast::ink(
+            tokens.accent,
+            &[theme.background, tokens.rail],
+            LOCK_CONTRAST,
+        );
+        (ink, 1.0)
+    } else {
+        (theme.muted, LOCK_OPEN_OPACITY)
+    }
+}
+
+/// The colours of one handoff row.
+pub(super) struct RowColors {
+    pub(super) id_text: u32,
+    pub(super) detail_text: u32,
+}
+
+/// An active row (`shelf == None`) sits on the sidebar's own background: the
+/// id line in white (the foreground), the detail line a step dimmer (the
+/// foreground blended 12% toward the background, the nearest step that keeps 4.5 on every theme tested). A history row is gray (muted) on both lines.
+pub(super) fn row_colors(theme: &Theme, shelf: Option<Shelf>) -> RowColors {
+    match shelf {
+        None => RowColors {
+            id_text: theme.foreground,
+            detail_text: mix(theme.background, theme.foreground, 88),
+        },
+        Some(_) => RowColors {
+            id_text: theme.muted,
+            detail_text: theme.muted,
+        },
+    }
+}
+
 fn flip_folded(this: &mut HerdrWindow, cx: &mut Context<HerdrWindow>) {
     this.handoffs.collapsed = !this.handoffs.collapsed;
+    cx.notify();
+}
+
+fn dismiss(this: &mut HerdrWindow, path: PathBuf, cx: &mut Context<HerdrWindow>) {
+    this.handoffs.dismiss(path);
+    cx.notify();
+}
+
+fn toggle_pin(this: &mut HerdrWindow, path: PathBuf, cx: &mut Context<HerdrWindow>) {
+    this.handoffs.toggle_pin(path);
     cx.notify();
 }
 
@@ -69,7 +168,12 @@ impl HerdrWindow {
             } else {
                 Vec::new()
             };
-            div()
+            let bar = self
+                .handoffs
+                .history_open
+                .then(|| self.bulk_actions(cx))
+                .flatten();
+            let list = div()
                 .id("handoffs-scroll")
                 .debug_selector(|| "handoffs-scroll".into())
                 .flex_initial()
@@ -80,16 +184,18 @@ impl HerdrWindow {
                 .text_size(px(font.size))
                 .line_height(px(line_height(font)))
                 .children(active)
-                .children(shelved)
+                .children(shelved);
+            div().min_h_0().flex().flex_col().children(bar).child(list)
         });
         let count = div()
             .debug_selector(|| "handoffs-count".into())
-            .child(label_text(&board.active.len().to_string()));
-        let right = div()
+            .text_color(rgb(theme.muted))
+            .child(label_text(&format!("\u{b7} {} active", board.active.len())));
+        let left = div()
             .flex()
             .items_center()
-            .gap_2()
-            .child(self.history_toggle(cx))
+            .gap_1()
+            .child(self.title_toggle(look, cx))
             .child(count);
         Some(
             div()
@@ -105,8 +211,8 @@ impl HerdrWindow {
                 .child(
                     header_frame("handoffs", font, theme, look)
                         .justify_between()
-                        .child(self.title_toggle(look, cx))
-                        .child(right),
+                        .child(left)
+                        .child(self.history_toggle(cx)),
                 )
                 .children(body),
         )
@@ -154,7 +260,65 @@ impl HerdrWindow {
         })
     }
 
-    /// The control that shows or hides the picked-up and superseded rows.
+    /// The all view's bar: clear the picked-up rows, restore the dismissed
+    /// ones. `None` when neither has anything to act on.
+    fn bulk_actions(&self, cx: &mut Context<Self>) -> Option<Div> {
+        let picked = self.handoffs.board.count(Shelf::PickedUp);
+        let dismissed = self.handoffs.board.count(Shelf::Dismissed);
+        if picked == 0 && dismissed == 0 {
+            return None;
+        }
+        let action = |id: &'static str, text: String, aria: String| {
+            div()
+                .id(id)
+                .debug_selector(|| id.into())
+                .role(Role::Button)
+                .aria_label(aria)
+                .cursor_pointer()
+                .text_color(rgb(self.theme.muted))
+                .hover(|style| style.text_color(rgb(self.theme.foreground)))
+                .child(label_text(&text))
+        };
+        let clear = (picked > 0).then(|| {
+            let control = action(
+                "handoffs-clear-picked-up",
+                format!("Clear picked up ({picked})"),
+                format!("Remove {picked} picked up handoffs from the list"),
+            )
+            .on_click(cx.listener(|this, _, _, cx| {
+                cx.stop_propagation();
+                this.handoffs.clear_picked_up();
+                cx.notify();
+            }));
+            self.chrome_stop(Region::Sidebar, control)
+        });
+        let restore = (dismissed > 0).then(|| {
+            let control = action(
+                "handoffs-restore",
+                format!("Restore cleared ({dismissed})"),
+                format!("Restore {dismissed} removed handoffs to the list"),
+            )
+            .on_click(cx.listener(|this, _, _, cx| {
+                cx.stop_propagation();
+                this.handoffs.restore_dismissed();
+                cx.notify();
+            }));
+            self.chrome_stop(Region::Sidebar, control)
+        });
+        Some(
+            div()
+                .flex_none()
+                .flex()
+                .items_center()
+                .gap_3()
+                .px(px(self.config.sidebar.size))
+                .py_1()
+                .children(clear)
+                .children(restore),
+        )
+    }
+
+    /// The control that shows or hides every handoff beyond the active ones.
     fn history_toggle(&self, cx: &mut Context<Self>) -> Stateful<Div> {
         let open = self.handoffs.history_open;
         let count = self.handoffs.board.history.len();
@@ -162,15 +326,15 @@ impl HerdrWindow {
             .id("handoffs-history-toggle")
             .debug_selector(|| "handoffs-history-toggle".into())
             .role(Role::Button)
-            .aria_label(format!("Picked up and superseded handoffs: {count}"))
+            .aria_label(format!("All handoffs: {count}"))
             .cursor_pointer()
-            .text_color(rgb(self.theme.muted))
+            .text_color(rgb(toggle_ink(&self.theme, open)))
             .hover(|style| style.text_color(rgb(self.theme.foreground)))
             .on_click(cx.listener(|this, _, _, cx| {
                 cx.stop_propagation();
                 flip_history(this, cx);
             }))
-            .child(label_text(&format!("picked up {count}")));
+            .child(label_text(&format!("all {count}")));
         let control = self.chrome_stop(Region::Sidebar, control);
         expandable(control, open, cx.entity().downgrade(), |this, _, cx| {
             flip_history(this, cx);
@@ -198,24 +362,101 @@ impl HerdrWindow {
         let (prefix, index) = slot;
         let theme = &self.theme;
         let path: PathBuf = handoff.path.clone();
+        let remove_path = path.clone();
+        let pin_path = path.clone();
+        let pinned = self.handoffs.pinned.contains(&path);
         let target = target_for(handoff);
-        let id_color = match shelf {
-            None => theme.subtext(),
-            Some(_) => theme.muted,
-        };
-        let aria = match shelf {
+        let colors = row_colors(theme, shelf);
+        let now = chrono::Local::now().naive_local();
+        let edited = edited_label(handoff, now);
+        let mut aria = match shelf {
             None => format!("Copy path of handoff {}", handoff.id),
             Some(shelf) => format!("Copy path of {} handoff {}", shelf.label(), handoff.id),
         };
+        if let Some(edited) = &edited {
+            aria.push_str(&format!(", edited {edited}"));
+        }
+        let edited = edited.map(|text| {
+            // Leftover width only: the project name keeps its own first.
+            div()
+                .debug_selector(|| format!("{prefix}-edited-{index}"))
+                .flex_1()
+                .min_w_0()
+                .truncate()
+                .text_size(px(self.config.sidebar.size * EDITED_SCALE))
+                .text_color(rgb(edited_ink(theme)))
+                .child(label_text(&text))
+        });
+        let (glyph, pin_aria) = if pinned {
+            (LOCK_CLOSED, format!("Unpin handoff {}", handoff.id))
+        } else {
+            (LOCK_OPEN, format!("Pin handoff {}", handoff.id))
+        };
+        let (ink, opacity) = pin_ink(theme, pinned);
+        let pin_group = SharedString::from(format!("{prefix}-pin-group-{index}"));
+        // Centred on the row's first line, whatever the row's height.
+        let pin = div()
+            .id((prefix, index + PIN_OFFSET))
+            .debug_selector(|| format!("{prefix}-pin-{index}"))
+            .role(Role::Button)
+            .aria_label(pin_aria)
+            .flex_none()
+            .self_start()
+            .h(px(line_height(&self.config.sidebar)))
+            .flex()
+            .items_center()
+            .px(px(2.))
+            .cursor_pointer()
+            .group(pin_group.clone())
+            .opacity(opacity)
+            .hover(|style| style.opacity(1.0))
+            .on_click(cx.listener(move |this, _, _, cx| {
+                cx.stop_propagation();
+                toggle_pin(this, pin_path.clone(), cx);
+            }))
+            // An svg paints with its own text colour, not the control's.
+            .child(
+                svg()
+                    .debug_selector(|| format!("{prefix}-pin-icon-{index}"))
+                    .path(glyph)
+                    .w(px(LOCK_SIZE))
+                    .h(px(LOCK_SIZE))
+                    .flex_none()
+                    .text_color(rgb(ink))
+                    .group_hover(pin_group, |style| style.text_color(rgb(theme.foreground))),
+            );
+        let pin = self.chrome_stop(Region::Sidebar, pin);
+        let group = SharedString::from(format!("{prefix}-group-{index}"));
+        // Hidden by opacity, not removed: it keeps its width and stays
+        // reachable by keyboard and assistive tech.
+        let remove = div()
+            .id((prefix, index + REMOVE_OFFSET))
+            .debug_selector(|| format!("{prefix}-x-{index}"))
+            .role(Role::Button)
+            .aria_label(format!("Remove handoff {} from list", handoff.id))
+            .flex_none()
+            .px_1()
+            .cursor_pointer()
+            .text_color(rgb(colors.detail_text))
+            .opacity(0.)
+            .group_hover(group.clone(), |style| style.opacity(1.0))
+            .hover(|style| style.text_color(rgb(colors.id_text)))
+            .on_click(cx.listener(move |this, _, _, cx| {
+                cx.stop_propagation();
+                dismiss(this, remove_path.clone(), cx);
+            }))
+            .child(label_text("\u{d7}"));
+        let remove = self.chrome_stop(Region::Sidebar, remove);
         let row = div()
             .id(slot)
+            .group(group)
             .debug_selector(|| format!("{prefix}-{index}"))
             .role(Role::Button)
             .aria_label(aria)
             .flex_none()
             .min_w_0()
             .px(px(look.content_x()))
-            .py(px(look.row_padding()))
+            .py(px(look.row_padding() + ROW_GAP))
             .cursor_pointer()
             .hover(|row| row.bg(rgba(crate::panel_resize::RESIZE_HOVER)))
             .on_click(cx.listener(move |this, _, _, cx| {
@@ -228,18 +469,40 @@ impl HerdrWindow {
                     this.open_code_view(&target, window, cx);
                 }),
             )
+            .flex()
+            .items_center()
+            .gap_1()
+            .child(pin)
             .child(
                 div()
-                    .truncate()
-                    .text_color(rgb(id_color))
-                    .child(label_text(&handoff.id)),
+                    .flex_1()
+                    .min_w_0()
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_1()
+                            .min_w_0()
+                            .child(
+                                div()
+                                    .debug_selector(|| format!("{prefix}-project-{index}"))
+                                    .flex_none()
+                                    .max_w(relative(1.))
+                                    .truncate()
+                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .text_color(rgb(colors.id_text))
+                                    .child(label_text(&handoff.project)),
+                            )
+                            .children(edited),
+                    )
+                    .child(
+                        div()
+                            .truncate()
+                            .text_color(rgb(colors.detail_text))
+                            .child(label_text(&detail(handoff, shelf, now))),
+                    ),
             )
-            .child(
-                div()
-                    .truncate()
-                    .text_color(rgb(theme.muted))
-                    .child(label_text(&detail(handoff, shelf))),
-            );
+            .child(remove);
         self.chrome_stop(Region::Sidebar, row)
     }
 }

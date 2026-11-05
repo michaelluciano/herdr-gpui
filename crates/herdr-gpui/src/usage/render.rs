@@ -1,12 +1,12 @@
-//! The status bar's usage segments: per agent, a meter for the window closest
-//! to its limit and the tightest windows' shares used with their time to
-//! reset, or in compact mode the tightest share alone. A click opens that
+//! The status bar's usage segments: per agent, the session window stacked
+//! over the weekly one, each with a meter, the share left and the time to
+//! reset, or in compact mode the tightest share used alone. A click opens that
 //! agent's panel, so the bar stays one quiet line; picking a tab there brings
 //! that agent to the front of the bar.
 
 use super::{
     Reading,
-    model::{Severity, Window as Limit},
+    model::{Kind, Severity, Window as Limit},
     panel::PANEL_GAP,
 };
 use crate::{config::status_bar::Detail, window::HerdrWindow};
@@ -154,7 +154,7 @@ impl HerdrWindow {
             Some(tightest) => format!("{} usage {}% used", provider.name(), tightest.percent()),
             None => format!("{} usage", provider.name()),
         };
-        let mut segment = div()
+        let segment = div()
             .id(SharedString::from(format!("usage-{key}")))
             .debug_selector(move || format!("usage-{key}"))
             .role(Role::Button)
@@ -229,17 +229,31 @@ impl HerdrWindow {
                 }
             }
             Detail::Detailed => {
-                if let Some(tightest) = report.tightest() {
-                    segment = segment.child(meter(tightest, theme));
-                }
+                // One line per window, the session above the week, each with
+                // its meter, the share left, and the time to reset.
+                labels = labels.flex_col().justify_center().h_full().gap(px(0.));
                 for (index, window) in bar_windows(&report.windows).enumerate() {
-                    if index > 0 {
-                        labels = labels.child(div().text_color(rgb(theme.muted)).child("·"));
-                    }
                     labels = labels.child(
                         div()
-                            .text_color(rgb(color(window.used.into(), theme, theme.foreground)))
-                            .child(window.label(now)),
+                            .debug_selector(move || format!("usage-{key}-window-{index}"))
+                            .flex()
+                            .items_center()
+                            .gap(px(6.))
+                            .child(meter(window, theme))
+                            .child(
+                                div()
+                                    .text_color(rgb(color(
+                                        window.used.into(),
+                                        theme,
+                                        theme.foreground,
+                                    )))
+                                    .child(bar_label(window)),
+                            )
+                            .children(window.resets_in(now).map(|left| {
+                                div()
+                                    .text_color(rgb(theme.muted))
+                                    .child(super::model::countdown(left))
+                            })),
                     );
                 }
             }
@@ -265,15 +279,38 @@ impl HerdrWindow {
     }
 }
 
-/// The [`BAR_WINDOWS`] windows closest to their limits, in report order so
-/// the session window keeps its place before the weekly one.
+/// The [`BAR_WINDOWS`] windows to show, in report order so the session
+/// window keeps its place before the weekly one: the session and weekly
+/// windows first, then those closest to their limits.
 pub(super) fn bar_windows(windows: &[Limit]) -> impl Iterator<Item = &Limit> {
     let mut tightest: Vec<usize> = (0..windows.len()).collect();
+    let plan = |window: &Limit| matches!(window.kind, Kind::Session | Kind::Weekly);
     // Stable, so equally used windows keep report order.
-    tightest.sort_by(|&a, &b| windows[b].used.total_cmp(&windows[a].used));
+    tightest.sort_by(|&a, &b| {
+        plan(&windows[b])
+            .cmp(&plan(&windows[a]))
+            .then(windows[b].used.total_cmp(&windows[a].used))
+    });
     tightest.truncate(BAR_WINDOWS);
     tightest.sort_unstable();
     tightest.into_iter().map(|index| &windows[index])
+}
+
+/// `5h 72% left`, `7d 41% left`: the window's length, or a model quota's
+/// name, and the share of it still left.
+pub(super) fn bar_label(window: &Limit) -> String {
+    let name = match (&window.kind, window.length) {
+        (Kind::Named(name), _) => name.clone(),
+        (_, Some(length)) if length.as_secs() % 86_400 == 0 => {
+            format!("{}d", length.as_secs() / 86_400)
+        }
+        (_, Some(length)) => format!("{}h", length.as_secs().div_ceil(3_600)),
+        (Kind::Session, None) => "5h".into(),
+        (Kind::Daily, None) => "1d".into(),
+        (Kind::Weekly, None) => "7d".into(),
+        (Kind::Monthly, None) => "mo".into(),
+    };
+    format!("{name} {}% left", window.left())
 }
 
 fn color(severity: Severity, theme: &crate::config::Theme, normal: u32) -> u32 {

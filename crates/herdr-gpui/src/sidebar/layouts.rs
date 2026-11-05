@@ -5,7 +5,7 @@
 mod herdr;
 mod minimal;
 mod orca;
-mod parts;
+pub(super) mod parts;
 mod superset;
 
 pub(super) use {herdr::Herdr, minimal::Minimal, orca::Orca, superset::Superset};

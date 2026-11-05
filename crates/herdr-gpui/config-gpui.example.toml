@@ -704,8 +704,9 @@ size = 12
 # or a `toggle_status_bar` binding, hides or shows it for the session. While
 # hidden, its connection message, prefix and resize badges show nowhere else.
 # show = true
-# "detailed" draws a meter and a service's two tightest windows; "compact"
-# shows each service's tightest limit as one share.
+# "detailed" stacks a service's session window over its weekly one, each with a
+# meter and the share left; "compact" shows each service's tightest limit as
+# one share.
 # usage = "detailed"
 # "detailed" draws a CPU graph and a memory meter; "compact" shows the shares.
 # system_load = "detailed"

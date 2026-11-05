@@ -1,15 +1,17 @@
 //! Sorts the loaded handoffs into the active list and the history.
 
 use super::list::Handoff;
+use std::{collections::HashSet, path::PathBuf};
 
 /// Why a handoff is in the history instead of the active list.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Shelf {
     /// Claimed or consumed, or somebody holds its claim.
     PickedUp,
-    /// Another handoff of its project names it as `prev`, or is newer in the
-    /// same session.
+    /// A newer handoff of its project exists.
     Superseded,
+    /// The operator removed it from the list.
+    Dismissed,
 }
 
 impl Shelf {
@@ -18,6 +20,7 @@ impl Shelf {
         match self {
             Self::PickedUp => "picked up",
             Self::Superseded => "superseded",
+            Self::Dismissed => "dismissed",
         }
     }
 }
@@ -37,58 +40,74 @@ pub(crate) struct Board {
     pub(crate) history: Vec<Shelved>,
 }
 
-/// How one loaded handoff is shown.
-enum Fate {
-    Active,
-    Shelved(Shelf),
-    /// Not shown: a status that is neither open nor picked up.
-    Hidden,
+impl Board {
+    /// Moves the pinned active handoffs to the top, each group keeping its
+    /// order. Only the active list is reordered: a pin on a history row
+    /// changes nothing until that handoff is active again.
+    pub(crate) fn pinned_first(mut self, pinned: &HashSet<PathBuf>) -> Self {
+        self.active
+            .sort_by_key(|handoff| !pinned.contains(&handoff.path));
+        self
+    }
+
+    /// How many history rows sit on `shelf`.
+    pub(crate) fn count(&self, shelf: Shelf) -> usize {
+        self.history.iter().filter(|s| s.shelf == shelf).count()
+    }
+
+    /// The files of the picked-up rows.
+    pub(crate) fn picked_up_paths(&self) -> Vec<PathBuf> {
+        self.history
+            .iter()
+            .filter(|s| s.shelf == Shelf::PickedUp)
+            .map(|s| s.handoff.path.clone())
+            .collect()
+    }
 }
 
-/// Sorts `list`, as [`super::list::list_all`] returns it, into the board.
+/// [`classify_with`] with nothing dismissed.
+#[cfg(test)]
 pub(crate) fn classify(list: Vec<Handoff>) -> Board {
-    let fates: Vec<Fate> = (0..list.len()).map(|index| fate(index, &list)).collect();
+    classify_with(list, &HashSet::new())
+}
+
+/// Sorts `list`, as [`super::list::list_all`] returns it (newest first), into
+/// the board. Per project only the newest handoff can be active, and only
+/// while it is open and unclaimed; every older one is superseded. A handoff
+/// whose status is neither open nor picked up is hidden and does not count as
+/// the project's newest. A dismissed handoff still counts as its project's
+/// newest, so the older ones stay superseded, but it goes to the history as
+/// [`Shelf::Dismissed`].
+pub(crate) fn classify_with(list: Vec<Handoff>, dismissed: &HashSet<PathBuf>) -> Board {
+    let mut seen: HashSet<String> = HashSet::new();
     let mut board = Board::default();
-    for (fate, handoff) in fates.into_iter().zip(list) {
-        match fate {
-            Fate::Active => board.active.push(handoff),
-            Fate::Shelved(shelf) => board.history.push(Shelved { shelf, handoff }),
-            Fate::Hidden => {}
+    for handoff in list {
+        let picked_up = match handoff.status.as_str() {
+            "claimed" | "consumed" => true,
+            // A claim on an open handoff picks it up; a claim on any other
+            // status means nothing to the sidebar.
+            "open" => !handoff.claimed_by.is_empty(),
+            _ => continue,
+        };
+        let newest = seen.insert(handoff.project.clone());
+        if dismissed.contains(&handoff.path) {
+            board.history.push(Shelved {
+                shelf: Shelf::Dismissed,
+                handoff,
+            });
+            continue;
+        }
+        match (newest, picked_up) {
+            (true, false) => board.active.push(handoff),
+            (true, true) => board.history.push(Shelved {
+                shelf: Shelf::PickedUp,
+                handoff,
+            }),
+            (false, _) => board.history.push(Shelved {
+                shelf: Shelf::Superseded,
+                handoff,
+            }),
         }
     }
     board
-}
-
-fn fate(index: usize, list: &[Handoff]) -> Fate {
-    let handoff = &list[index];
-    match handoff.status.as_str() {
-        "claimed" | "consumed" => Fate::Shelved(Shelf::PickedUp),
-        // A claim on an open handoff picks it up; a claim on any other
-        // status means nothing to the sidebar.
-        "open" if !handoff.claimed_by.is_empty() => Fate::Shelved(Shelf::PickedUp),
-        "open" if superseded(index, list) => Fate::Shelved(Shelf::Superseded),
-        "open" => Fate::Active,
-        _ => Fate::Hidden,
-    }
-}
-
-/// Whether another handoff of the same project names this one as `prev`, or
-/// is newer in the same non-empty session. Any status counts as "another":
-/// a claim that picks a handoff up is how it gets superseded.
-fn superseded(index: usize, list: &[Handoff]) -> bool {
-    let handoff = &list[index];
-    list.iter().enumerate().any(|(other, later)| {
-        other != index
-            && later.project == handoff.project
-            && ((!later.prev.is_empty() && later.prev == handoff.id)
-                || (!handoff.session_id.is_empty()
-                    && later.session_id == handoff.session_id
-                    && newer(later, handoff)))
-    })
-}
-
-/// Whether `a` sorts before `b` in the loader's order: later `created`
-/// first, then the path. Exactly one handoff of a session is the newest.
-fn newer(a: &Handoff, b: &Handoff) -> bool {
-    a.created > b.created || (a.created == b.created && a.path < b.path)
 }

@@ -14,7 +14,7 @@ Transparent margins keep the artwork aligned with other desktop icons.
 
 `herdr-ui-icon-clean.svg` is the rounded tile source artwork;
 `herdr-icon-square-clean.svg` is the legacy full-square variant. It remains an
-input to `scripts/generate-icons.swift`, which regenerates its normal and red
+input to `scripts/generate-icons.swift`, which regenerates its normal and teal
 PNG exports; Linux packaging no longer installs those square assets.
 The rounded 1024x1024 PNG export serves the About box; Linux packages install
 `herdr-linux.svg`, a circular composition of the same ram, as the scalable icon.
@@ -62,12 +62,12 @@ rather than cropping the macOS composition. The circle is 896px across on a
 1024px canvas, with 64px margins.
 The desktop entry uses `Icon=herdr-gpui`; its filename and `StartupWMClass` match
 the app's `so.pen.herdr-gpui` identity for Wayland and X11 window association.
-Linked-worktree packages select the circular red `herdr-linux-worktree.svg`
+Linked-worktree packages select the circular teal `herdr-linux-worktree.svg`
 instead, installed at the same scalable icon path.
 
 Run `just icons-linux` on any platform to regenerate both Linux SVGs from the ram
 path and attribution in `herdr-ui-icon-clean.svg`. It needs only Python's standard
-library; the red palette matches the flat colors of the macOS worktree export.
+library; the teal palette matches the flat colors of the macOS worktree export.
 `just icons` also runs this generator before generating the macOS assets.
 
 This follows freedesktop icon lookup conventions used by GNOME, KDE Plasma, and
@@ -127,7 +127,7 @@ The flattened `.icns` icons follow Apple's
 | 1024 | 824 | 100 |
 
 The generator fits the source SVG's 896px rounded tile to these bounds before
-rasterizing. Both the normal and red worktree icons use the same margins,
+rasterizing. Both the normal and teal worktree icons use the same margins,
 including the embedded 1024px PNG used by the About box. The circular Linux
 artwork uses its own composition and margins instead of Apple's sizing.
 

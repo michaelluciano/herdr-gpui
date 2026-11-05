@@ -70,7 +70,7 @@ fn history(view: &Entity<HerdrWindow>, cx: &mut VisualTestContext) -> Vec<(Strin
 fn a_poll_reads_the_root_off_thread_and_fills_the_list(cx: &mut gpui::TestAppContext) {
     let root = Root::new("poll-fill");
     root.session("p", "a.md", open_header("a", "2026-10-30"));
-    root.session("p", "b.md", open_header("b", "2026-10-31"));
+    root.session("q", "b.md", open_header("b", "2026-10-31"));
     let (view, notified, cx) = counted(cx);
     assert!(ids(&view, cx).is_empty());
     let before = notified.get();
@@ -103,7 +103,7 @@ fn a_changed_directory_updates_the_list_after_five_seconds(cx: &mut gpui::TestAp
     poll(&view, cx, t0, &root);
     assert_eq!(ids(&view, cx), ["a"]);
 
-    root.session("p", "b.md", open_header("b", "2026-10-31"));
+    root.session("q", "b.md", open_header("b", "2026-10-31"));
     // Inside the interval nothing is read.
     poll(&view, cx, t0 + Duration::from_secs(2), &root);
     assert_eq!(ids(&view, cx), ["a"], "polled again before five seconds");

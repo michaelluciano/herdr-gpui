@@ -22,7 +22,7 @@ pub(super) fn check_text_allocation(cx: &mut gpui::VisualTestContext) {
         }
         // Each part of an agent's line is painted on its own, so the tab can
         // stay muted beside its workspace.
-        for input in ["herdr", "main", "tab 1", "Claude Code"] {
+        for input in ["herdr", "main", "[1]"] {
             let (bounds, rendered, _) = &cx.global::<TextProbes>().0[input];
             assert_eq!(
                 rendered, input,
@@ -106,18 +106,6 @@ pub(super) fn check_row_geometry(cx: &mut gpui::VisualTestContext) {
             "name-herdr-gpui-sidebar-rendering-regression-investigation",
             "detail-herdr-gpui-sidebar-rendering-regression-investigation",
         ),
-        (
-            "row-agent-p0",
-            "column-agent-p0",
-            "name-agent-p0",
-            "detail-agent-p0",
-        ),
-        (
-            "row-agent-p1",
-            "column-agent-p1",
-            "name-agent-p1",
-            "detail-agent-p1",
-        ),
     ] {
         let row_bounds = cx.debug_bounds(row).unwrap();
         let column_bounds = cx.debug_bounds(column).unwrap();
@@ -140,6 +128,19 @@ pub(super) fn check_row_geometry(cx: &mut gpui::VisualTestContext) {
             row_bounds.bottom() <= sidebar.bottom(),
             "visible initial rows"
         );
+    }
+    // An agent's name has its whole line; its details sit on the line below.
+    for (row, name, sep) in [
+        ("row-agent-p0", "name-agent-p0", "agent-sep-agent-p0"),
+        ("row-agent-p1", "name-agent-p1", "agent-sep-agent-p1"),
+    ] {
+        let row_bounds = cx.debug_bounds(row).unwrap();
+        let name_bounds = cx.debug_bounds(name).unwrap();
+        assert!(name_bounds.size.width > px(150.), "{name}: {name_bounds:?}");
+        assert_eq!(name_bounds.size.height, px(16.), "single-line name");
+        assert_eq!(row_bounds.size.height, px(40.));
+        assert!(name_bounds.right() <= sidebar.right() - px(12.));
+        assert_eq!(cx.debug_bounds(sep).is_some(), row == "row-agent-p0");
     }
 }
 

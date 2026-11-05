@@ -16,6 +16,7 @@ pub(super) fn handoff(id: &str, project: &str, created: &str) -> Handoff {
         parent: String::new(),
         prev: String::new(),
         claimed_by: String::new(),
+        modified: None,
     }
 }
 
@@ -49,7 +50,7 @@ pub(super) fn window(
             shown.focused_tab_id = Some("t0".into());
             view.live.snapshot = Some(Arc::new(shown));
             view.live.status = ConnectionStatus::Connected;
-            view.handoffs.board = crate::handoffs::classify(list);
+            view.handoffs.set_list(list);
             view
         });
         cx.observe(&view, |_, _, cx| cx.notify()).detach();
@@ -80,45 +81,40 @@ fn open_handoffs_list_below_the_workspaces_and_agents(cx: &mut gpui::TestAppCont
     if let Some(agents) = cx.debug_bounds("agents-section") {
         assert!(agents.bottom() <= section.top(), "below the agents list");
     }
-    let rows: Vec<_> = (0..3)
-        .map(|n| {
-            let name: &'static str = Box::leak(format!("handoff-row-{n}").into_boxed_str());
-            cx.debug_bounds(name).unwrap_or_else(|| panic!("no {name}"))
-        })
-        .collect();
-    for pair in rows.windows(2) {
-        assert!(pair[0].bottom() <= pair[1].top(), "rows stack in order");
-    }
-    for row in &rows {
-        assert!(section.top() <= row.top() && row.bottom() <= section.bottom());
-    }
-    assert!(cx.debug_bounds("handoff-row-3").is_none());
+    let row = cx.debug_bounds("handoff-row-0").expect("no active handoff");
+    assert!(section.top() <= row.top() && row.bottom() <= section.bottom());
 }
 
 #[gpui::test]
-fn each_row_shows_its_id_and_project_with_the_written_time(cx: &mut gpui::TestAppContext) {
+fn the_first_row_shows_its_project_then_the_short_id_and_age(cx: &mut gpui::TestAppContext) {
     let (_view, cx) = window(cx, None, three());
     let shown = texts(cx);
-    for expected in [
-        "S-2026-10-31-e8da4cd3",
-        "claude-setup \u{b7} 10-31 13:41",
-        "S38-next",
-        "kb \u{b7} 10-31",
-        "S-2026-10-30-aa11bb22",
-        "remora \u{b7} 10-30 09:00",
-    ] {
-        assert!(
-            shown.iter().any(|text| text == expected),
-            "{expected:?} in {shown:?}"
-        );
-    }
+    assert!(shown.iter().any(|text| text == "claude-setup"), "{shown:?}");
+    assert!(
+        shown
+            .iter()
+            .any(|text| text.starts_with("S-e8da4cd3 \u{b7} ")),
+        "short id and age in {shown:?}"
+    );
+    assert!(
+        !shown.iter().any(|text| text.contains("2026-10-31")),
+        "the date is not shown: {shown:?}"
+    );
     assert!(
         shown
             .iter()
             .any(|text| text.to_lowercase().contains("handoffs")),
         "a Handoffs heading in {shown:?}"
     );
-    assert!(shown.iter().any(|text| text.contains('3')), "the count");
+    assert!(
+        shown.iter().any(|text| text == "\u{b7} 3 active"),
+        "the labelled count in {shown:?}"
+    );
+    assert!(cx.debug_bounds("handoffs-count").is_some());
+    assert!(
+        !shown.iter().any(|text| text == "3"),
+        "no bare count in {shown:?}"
+    );
 }
 
 #[gpui::test]
@@ -147,7 +143,7 @@ fn the_devices_layout_shows_no_handoffs(cx: &mut gpui::TestAppContext) {
 #[gpui::test]
 fn a_long_list_scrolls_inside_thirty_percent_of_the_sidebar(cx: &mut gpui::TestAppContext) {
     let many: Vec<_> = (0..40)
-        .map(|n| handoff(&format!("S{n:02}"), "proj", "2026-10-31"))
+        .map(|n| handoff(&format!("S{n:02}"), &format!("proj{n:02}"), "2026-10-31"))
         .collect();
     let (_view, cx) = window(cx, None, many);
     let sidebar = cx.debug_bounds("sidebar").unwrap();
@@ -176,4 +172,17 @@ fn a_short_list_is_shorter_than_the_cap(cx: &mut gpui::TestAppContext) {
         .debug_bounds("handoffs-section")
         .expect("no handoffs section");
     assert!(section.size.height <= sidebar.size.height * 0.30 + px(1.));
+}
+
+#[gpui::test]
+fn the_remove_control_keeps_its_width_and_the_header_has_no_bare_count(
+    cx: &mut gpui::TestAppContext,
+) {
+    let (_view, cx) = window(cx, None, three());
+    let remove = cx
+        .debug_bounds("handoff-row-x-0")
+        .expect("the x stays laid out");
+    assert!(remove.size.width > px(0.), "{remove:?}");
+    let row = cx.debug_bounds("handoff-row-0").unwrap();
+    assert!(remove.right() <= row.right());
 }

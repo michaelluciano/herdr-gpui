@@ -46,21 +46,21 @@ func render(_ sourceName: String, pixels: Int, macOS: Bool) throws -> Data {
 let colorContext = CIContext()
 func worktreePNG(_ source: Data) -> Data {
   let image = NSBitmapImageRep(data: source)!.cgImage!
-  // Map luminance to a saturated red palette while retaining the original alpha
-  // and shading at this resolution.
-  let red = CIImage(cgImage: image).applyingFilter(
+  // Map luminance to a teal palette while retaining the original alpha and
+  // shading at this resolution: the tile becomes #5cc8c0 and the ram #1d5f5c.
+  let teal = CIImage(cgImage: image).applyingFilter(
     "CIColorMatrix",
     parameters: [
-      "inputRVector": CIVector(x: 0.1382, y: 0.4649, z: 0.0469, w: 0),
-      "inputGVector": CIVector(x: 0.0255, y: 0.0858, z: 0.0087, w: 0),
-      "inputBVector": CIVector(x: 0.0255, y: 0.0858, z: 0.0087, w: 0),
+      "inputRVector": CIVector(x: 0.0237, y: 0.0798, z: 0.0081, w: 0),
+      "inputGVector": CIVector(x: 0.1168, y: 0.3929, z: 0.0397, w: 0),
+      "inputBVector": CIVector(x: 0.1052, y: 0.3540, z: 0.0357, w: 0),
       "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
-      "inputBiasVector": CIVector(x: 0.25, y: 0.02, z: 0.035, w: 0),
+      "inputBiasVector": CIVector(x: 0.0087, y: 0.0941, z: 0.0909, w: 0),
     ])
-  guard let redImage = colorContext.createCGImage(red, from: red.extent) else {
-    fatalError("Unable to generate the red worktree icon")
+  guard let tealImage = colorContext.createCGImage(teal, from: teal.extent) else {
+    fatalError("Unable to generate the teal worktree icon")
   }
-  return NSBitmapImageRep(cgImage: redImage).representation(using: .png, properties: [:])!
+  return NSBitmapImageRep(cgImage: tealImage).representation(using: .png, properties: [:])!
 }
 
 func worktreeColor(_ color: NSColor) -> NSColor {
@@ -71,8 +71,8 @@ func worktreeColor(_ color: NSColor) -> NSColor {
   swatch.setFillColor(color.cgColor)
   swatch.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
   let png = NSBitmapImageRep(cgImage: swatch.makeImage()!).representation(using: .png, properties: [:])!
-  let red = NSBitmapImageRep(data: worktreePNG(png))!
-  return red.colorAt(x: 0, y: 0)!.usingColorSpace(.sRGB)!
+  let tinted = NSBitmapImageRep(data: worktreePNG(png))!
+  return tinted.colorAt(x: 0, y: 0)!.usingColorSpace(.sRGB)!
 }
 
 func hexString(_ color: NSColor) -> String {
@@ -160,12 +160,12 @@ func compileAssetCatalog(_ sourceName: String, name: String, isWorktree: Bool) t
   print("Generated assets/icons/\(name).car")
 }
 
-for (sourceName, redName, bundleName) in variants {
+for (sourceName, worktreeName, bundleName) in variants {
   let source = try render(sourceName, pixels: 1024, macOS: bundleName != nil)
-  let redPNG = worktreePNG(source)
+  let worktreeImage = worktreePNG(source)
   let pngURL = assets.appendingPathComponent(sourceName).deletingPathExtension().appendingPathExtension("png")
   try source.write(to: pngURL)
-  try redPNG.write(to: assets.appendingPathComponent(redName))
+  try worktreeImage.write(to: assets.appendingPathComponent(worktreeName))
 
   guard let bundleName else { continue }
   for (name, isWorktree) in [(bundleName, false), ("\(bundleName)-worktree", true)] {

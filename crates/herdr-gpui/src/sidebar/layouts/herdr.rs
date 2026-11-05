@@ -4,6 +4,7 @@
 
 use super::super::{
     ARROW_RESERVE,
+    agent_line::AgentLine,
     agents::agent_labels,
     cell::{AgentRow, RowContext, RowLayout, RowState, WorkspaceRow},
     line_height,
@@ -56,7 +57,9 @@ impl RowLayout for Herdr {
             badge,
             upstream,
             None,
+            None,
             &lines,
+            None,
             cx,
         )
     }
@@ -68,6 +71,23 @@ impl RowLayout for Herdr {
 
     fn agent(&self, agent: AgentRow<'_>, state: RowState, cx: &RowContext<'_>) -> Div {
         let (name, detail) = agent_labels(agent.name, agent.place, cx.host, agent.pane.as_deref());
+        // With a place the row has two lines: the name on the first, the
+        // details below it. Without one, the status stays beside the name.
+        let two_lines = agent.lines.is_empty() && !detail.is_empty();
+        let line = two_lines.then(|| AgentLine {
+            tab: agent.tab,
+            glyph: agent
+                .status_icon
+                .as_ref()
+                .map(|icon| (icon.glyph, icon.words.as_str())),
+            status: match &agent.status_icon {
+                Some(icon) => Some(icon.detail.as_str()).filter(|detail| !detail.is_empty()),
+                None => agent.status_text.as_deref(),
+            },
+            status_color: agent
+                .status_color
+                .unwrap_or_else(|| cx.indicators.color(agent.status)),
+        });
         super::super::row::row(
             &agent.key,
             &name,
@@ -83,8 +103,10 @@ impl RowLayout for Herdr {
             None,
             None,
             None,
-            agent.status_text.as_deref(),
+            agent.status_text.as_deref().filter(|_| !two_lines),
+            agent.status_color,
             &agent.lines,
+            line,
             cx,
         )
     }
