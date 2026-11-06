@@ -163,6 +163,7 @@ pub fn start_sidebar(handle: WindowHandle<HerdrWindow>, cx: &mut App) {
                         .activity_title_height();
                     let h = h
                         + sidebar::DEVICE_FOOTER_HEIGHT
+                        + sidebar::GH_CHIP_HEIGHT
                         + title
                         + if style == Style::Rounded { 160. } else { 0. };
                     let mode = LayoutMode::new(density, style);

@@ -4,18 +4,32 @@ use super::*;
 fn sidebar_split_drag_clamps_releases_outside_and_resets(cx: &mut gpui::TestAppContext) {
     use gpui::{MouseButton, MouseDownEvent};
 
-    let (view, cx) = cx.add_window_view(fixture_window);
+    // A short list, so the divider's floor leaves room to drag.
+    let (view, cx) = cx.add_window_view(|window, cx| {
+        let mut view = fixture_window(window, cx);
+        view.live.snapshot = Some(Arc::new(snapshot(1)));
+        view
+    });
     cx.simulate_resize(size(px(800.), px(600.)));
     cx.update(|window, cx| full_draw(window, cx).clear(cx));
     let sidebar = cx.debug_bounds("sidebar").unwrap();
     let initial_spaces = cx.debug_bounds("spaces-section").unwrap();
     let initial_agents = cx.debug_bounds("agents-section").unwrap();
     let footer = cx.debug_bounds("device-footer").unwrap();
+    let chip = cx.debug_bounds("gh-chip").unwrap();
     assert!((initial_spaces.size.height - initial_agents.size.height).abs() <= px(1.));
 
-    for (requested, expected) in [(0.7, 0.7), (0.3, 0.3), (-0.5, 0.1), (1.5, 0.9)] {
+    // The 0.1 case lands on the list's floor, measured from the first frame.
+    let floor = view.read_with(cx, |view, _| {
+        let scroll = &view.sidebar_scroll[0];
+        let last = scroll.bounds_for_item(scroll.children_count() - 1).unwrap();
+        let used = last.bottom() - initial_spaces.top() + px(26.);
+        f32::from(used) / f32::from(initial_spaces.size.height + initial_agents.size.height)
+    });
+    for (requested, expected) in [(0.7, 0.7), (0.3, 0.3), (-0.5, floor), (1.5, 0.9)] {
         let divider = cx.debug_bounds("sidebar-split-resize").unwrap();
-        let available = sidebar.size.height - divider.size.height - footer.size.height;
+        let available =
+            sidebar.size.height - divider.size.height - footer.size.height - chip.size.height;
         // Move and release outside the sidebar as well as outside the divider.
         let end = point(
             sidebar.right() + px(100.),
@@ -37,7 +51,7 @@ fn sidebar_split_drag_clamps_releases_outside_and_resets(cx: &mut gpui::TestAppC
         assert!((agents.size.height - available * (1. - expected)).abs() <= px(1.));
         assert_eq!(spaces.bottom(), divider.top());
         assert_eq!(divider.bottom(), agents.top());
-        assert_eq!(agents.bottom(), footer.top());
+        assert_eq!(agents.bottom(), chip.top());
 
         cx.simulate_mouse_up(end, MouseButton::Left, Modifiers::default());
         let released = view.read_with(cx, |view, _| {
@@ -94,7 +108,8 @@ fn sidebar_split_preserves_independent_scrolling_and_agents_toggle(cx: &mut gpui
     cx.simulate_mouse_up(end, MouseButton::Left, Modifiers::default());
     cx.update(|window, cx| full_draw(window, cx).clear(cx));
     let split = view.read_with(cx, |view, _| view.sidebar_split.unwrap());
-    assert!(split < 0.5);
+    // The long list holds the divider at its floor, not at the drag.
+    assert!(split > 0.5);
     let spaces = cx.debug_bounds("spaces-section").unwrap();
     let agents = cx.debug_bounds("agents-section").unwrap();
 
@@ -145,7 +160,58 @@ fn sidebar_split_preserves_independent_scrolling_and_agents_toggle(cx: &mut gpui
                 current_spaces.size.height,
                 cx.debug_bounds("sidebar").unwrap().size.height
                     - cx.debug_bounds("device-footer").unwrap().size.height
+                    - cx.debug_bounds("gh-chip").unwrap().size.height
             );
         }
     }
+}
+
+#[gpui::test]
+fn sidebar_split_never_drags_above_the_workspace_list(cx: &mut gpui::TestAppContext) {
+    use gpui::MouseButton;
+
+    let (view, cx) = cx.add_window_view(|window, cx| {
+        let mut view = fixture_window(window, cx);
+        view.live.snapshot = Some(Arc::new(snapshot(3)));
+        view
+    });
+    cx.simulate_resize(size(px(800.), px(600.)));
+    for _ in 0..2 {
+        cx.update(|window, cx| full_draw(window, cx).clear(cx));
+    }
+    let sidebar = cx.debug_bounds("sidebar").unwrap();
+    let divider = cx.debug_bounds("sidebar-split-resize").unwrap();
+    let initial = cx.debug_bounds("spaces-scroll").unwrap();
+    let (count, last_bottom) = view.read_with(cx, |view, _| {
+        let scroll = &view.sidebar_scroll[0];
+        let count = scroll.children_count();
+        (count, scroll.bounds_for_item(count - 1).unwrap().bottom())
+    });
+    assert!(
+        count > 0 && last_bottom <= initial.bottom(),
+        "list fits at rest"
+    );
+
+    // Drag the divider to the very top of the window.
+    let end = point(sidebar.center().x, sidebar.top() - px(100.));
+    cx.simulate_mouse_down(divider.center(), MouseButton::Left, Modifiers::default());
+    cx.simulate_mouse_move(end, MouseButton::Left, Modifiers::default());
+    for _ in 0..2 {
+        cx.update(|window, cx| full_draw(window, cx).clear(cx));
+    }
+    cx.simulate_mouse_up(end, MouseButton::Left, Modifiers::default());
+    for _ in 0..2 {
+        cx.update(|window, cx| full_draw(window, cx).clear(cx));
+    }
+    let list = cx.debug_bounds("spaces-scroll").unwrap();
+    view.read_with(cx, |view, _| {
+        let scroll = &view.sidebar_scroll[0];
+        assert_eq!(scroll.max_offset().y, px(0.), "no workspace scrolled away");
+        let bottom = scroll.bounds_for_item(count - 1).unwrap().bottom();
+        assert!(
+            bottom <= list.bottom() + px(1.),
+            "last workspace is clipped"
+        );
+        assert!(view.sidebar_split.unwrap() > 0.1);
+    });
 }
