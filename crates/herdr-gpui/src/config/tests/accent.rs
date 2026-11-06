@@ -17,7 +17,7 @@ fn the_accent_follows_the_theme_unless_the_system_is_asked_for() -> anyhow::Resu
 fn a_system_accent_replaces_the_primary_color_but_no_terminal_color() {
     let theme = Theme::default();
     let accented = theme.clone().with_accent(Some(0x0078d4));
-    assert_eq!(theme.primary(), 0xa99be0);
+    assert_eq!(theme.primary(), 0x5cc8c0);
     assert_eq!(Theme::neutral().primary(), Theme::neutral().palette[5]);
     assert_eq!(accented.primary(), 0x0078d4);
     assert_eq!(accented.palette, theme.palette);

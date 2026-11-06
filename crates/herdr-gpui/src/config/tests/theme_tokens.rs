@@ -15,7 +15,7 @@ fn the_default_theme_resolves_the_soft_dark_palette_through_tokens() {
         ("idle", tokens.idle, 0x8d929b),
         ("done", tokens.done, 0x7fb596),
         ("blocked", tokens.blocked, 0xd9786a),
-        ("accent", tokens.accent, 0xa99be0),
+        ("accent", tokens.accent, 0x5cc8c0),
         ("hover", tokens.hover, 0x33353a),
         ("selected", tokens.selected, 0x363849),
     ] {
@@ -55,7 +55,7 @@ fn other_themes_derive_tokens_from_their_own_colors() -> anyhow::Result<()> {
         assert_ne!(tokens.faint, tokens.bg, "{name}");
         assert_ne!(tokens.bg, default.bg, "{name}");
         assert_ne!(
-            tokens.accent, 0xa99be0,
+            tokens.accent, 0x5cc8c0,
             "{name} must not inherit the default accent"
         );
     }
