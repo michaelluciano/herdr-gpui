@@ -8,6 +8,7 @@ mod agents;
 mod animated;
 mod cell;
 mod device_drag;
+mod gh_chip;
 mod handoffs;
 mod header;
 mod host_row;
