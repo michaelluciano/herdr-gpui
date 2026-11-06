@@ -11,11 +11,13 @@ fn sidebar_split_drag_clamps_releases_outside_and_resets(cx: &mut gpui::TestAppC
     let initial_spaces = cx.debug_bounds("spaces-section").unwrap();
     let initial_agents = cx.debug_bounds("agents-section").unwrap();
     let footer = cx.debug_bounds("device-footer").unwrap();
+    let chip = cx.debug_bounds("gh-chip").unwrap();
     assert!((initial_spaces.size.height - initial_agents.size.height).abs() <= px(1.));
 
     for (requested, expected) in [(0.7, 0.7), (0.3, 0.3), (-0.5, 0.1), (1.5, 0.9)] {
         let divider = cx.debug_bounds("sidebar-split-resize").unwrap();
-        let available = sidebar.size.height - divider.size.height - footer.size.height;
+        let available =
+            sidebar.size.height - divider.size.height - footer.size.height - chip.size.height;
         // Move and release outside the sidebar as well as outside the divider.
         let end = point(
             sidebar.right() + px(100.),
@@ -37,7 +39,7 @@ fn sidebar_split_drag_clamps_releases_outside_and_resets(cx: &mut gpui::TestAppC
         assert!((agents.size.height - available * (1. - expected)).abs() <= px(1.));
         assert_eq!(spaces.bottom(), divider.top());
         assert_eq!(divider.bottom(), agents.top());
-        assert_eq!(agents.bottom(), footer.top());
+        assert_eq!(agents.bottom(), chip.top());
 
         cx.simulate_mouse_up(end, MouseButton::Left, Modifiers::default());
         let released = view.read_with(cx, |view, _| {
@@ -145,6 +147,7 @@ fn sidebar_split_preserves_independent_scrolling_and_agents_toggle(cx: &mut gpui
                 current_spaces.size.height,
                 cx.debug_bounds("sidebar").unwrap().size.height
                     - cx.debug_bounds("device-footer").unwrap().size.height
+                    - cx.debug_bounds("gh-chip").unwrap().size.height
             );
         }
     }
