@@ -670,6 +670,7 @@ impl HerdrWindow {
             self.discard_composition(cx);
         }
         self.poll_github(window, cx);
+        self.poll_gh_chip(cx);
         if self.update_workspace_pr() {
             cx.notify();
         }

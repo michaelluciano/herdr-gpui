@@ -18,12 +18,8 @@ pub(super) fn parse_gh_accounts(status: &str) -> Vec<GhAccount> {
         }
 
         // Host block start/end
-        if line.chars().next().map_or(false, |c| !c.is_whitespace()) && !trimmed.contains(' ') {
-            if trimmed == "github.com" {
-                inside_github = true;
-            } else {
-                inside_github = false;
-            }
+        if line.chars().next().is_some_and(|c| !c.is_whitespace()) && !trimmed.contains(' ') {
+            inside_github = trimmed == "github.com";
             continue;
         }
         if !inside_github {
