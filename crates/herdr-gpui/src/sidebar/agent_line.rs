@@ -24,6 +24,8 @@ pub(super) struct AgentLine<'a> {
     pub(super) glyph: Option<(Glyph, &'a str)>,
     pub(super) status: Option<&'a str>,
     pub(super) status_color: u32,
+    /// The model letter beside the icon.
+    pub(super) letter: Option<char>,
 }
 
 /// The tab tag, as the tab bar numbers it.
@@ -73,7 +75,7 @@ pub(super) fn line(
     limit: f32,
     (font, theme, muted): (&FontConfig, &Theme, u32),
 ) -> Div {
-    let (size, reserve) = agent_icon_size(font);
+    let (size, reserve) = agent_icon_size(font, parts.letter);
     let glyph = glyph_width(font);
     let tag = parts.tab.map(tab_tag);
     let status_chars = parts.status.map_or(0, |text| text.width());
@@ -91,7 +93,14 @@ pub(super) fn line(
         .w(px(limit))
         .h(px(line_height(font)))
         .overflow_hidden()
-        .child(agent_mark(key, icon, size, muted, font))
+        .child(agent_mark(
+            key,
+            icon,
+            size,
+            muted,
+            font,
+            parts.letter.map(|letter| (letter, theme.muted)),
+        ))
         .child(
             div()
                 .absolute()

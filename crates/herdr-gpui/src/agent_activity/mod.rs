@@ -8,10 +8,12 @@ mod glyph;
 mod label;
 mod poll;
 mod read;
+mod stats;
 
 #[cfg(test)]
 mod tests;
 
 pub(crate) use glyph::Glyph;
 pub(crate) use label::Tone;
-pub(crate) use poll::AgentActivity;
+pub(crate) use poll::{AgentActivity, is_claude};
+pub(crate) use stats::{ContextBand, Stats, context_band, format_context, model_letter};

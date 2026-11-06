@@ -136,6 +136,9 @@ pub(super) struct AgentRow<'a> {
     pub(super) status_text: Option<Cow<'a, str>>,
     /// The status word's own color when it is a Claude activity label.
     pub(super) status_color: Option<u32>,
+    /// The model letter and context size from the session's transcript, for a
+    /// local Claude agent that has one.
+    pub(super) stats: Option<super::agent_stats::StatsMark>,
     /// Daemon token rows, painted in the layout's own frame. Empty keeps its native lines.
     pub(super) lines: Vec<Vec<super::tokens::ResolvedToken>>,
 }

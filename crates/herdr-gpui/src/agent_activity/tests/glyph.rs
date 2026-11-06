@@ -14,6 +14,7 @@ fn report(state: ReportState, age: u64, tool: &str, subagents: u32) -> Report {
         subagents,
         tool: tool.into(),
         cwd: None,
+        transcript: None,
     }
 }
 

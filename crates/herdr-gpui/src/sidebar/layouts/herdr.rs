@@ -60,6 +60,7 @@ impl RowLayout for Herdr {
             None,
             &lines,
             None,
+            None,
             cx,
         )
     }
@@ -73,6 +74,9 @@ impl RowLayout for Herdr {
         let (name, detail) = agent_labels(agent.name, agent.place, cx.host, agent.pane.as_deref());
         // With a place the row has two lines: the name on the first, the
         // details below it. Without one, the status stays beside the name.
+        // Daemon-configured token rows paint their own lines, so they carry
+        // neither mark.
+        let stats = agent.stats.as_ref().filter(|_| agent.lines.is_empty());
         let two_lines = agent.lines.is_empty() && !detail.is_empty();
         let line = two_lines.then(|| AgentLine {
             tab: agent.tab,
@@ -87,6 +91,7 @@ impl RowLayout for Herdr {
             status_color: agent
                 .status_color
                 .unwrap_or_else(|| cx.indicators.color(agent.status)),
+            letter: stats.and_then(|stats| stats.letter),
         });
         super::super::row::row(
             &agent.key,
@@ -107,6 +112,7 @@ impl RowLayout for Herdr {
             agent.status_color,
             &agent.lines,
             line,
+            stats,
             cx,
         )
     }

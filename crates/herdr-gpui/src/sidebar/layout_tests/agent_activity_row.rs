@@ -41,7 +41,7 @@ fn a_claude_row_shows_its_activity_label(cx: &mut gpui::TestAppContext) {
     let path = dir.clone();
     cx.update(|_, cx| {
         view.update(cx, |view, cx| {
-            view.poll_agent_activity_at(Instant::now(), path, cx)
+            view.poll_agent_activity_at(Instant::now(), path, None, cx)
         })
     });
     cx.run_until_parked();

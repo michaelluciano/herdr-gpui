@@ -1,16 +1,23 @@
 //! Reads the per-pane state files Claude Code's hooks write.
 
-use super::label::{Report, ReportState};
+use super::{
+    label::{Report, ReportState},
+    stats::{Stats, parse_transcript_tail},
+};
 use std::{
     collections::HashMap,
-    io::Read,
+    io::{Read, Seek, SeekFrom},
     path::{Path, PathBuf},
 };
 
 /// A file longer than this is not a report.
-const MAX_BYTES: u64 = 2048;
+const MAX_BYTES: u64 = 4096;
 /// The longest session directory kept, in bytes.
 const CWD_LIMIT: usize = 1024;
+/// How much of a transcript's end is read for its latest usage.
+const TRANSCRIPT_TAIL: u64 = 262_144;
+/// A settings file longer than this is not read.
+const SETTINGS_MAX: u64 = 1024 * 1024;
 /// The longest tool name shown.
 const TOOL_LIMIT: usize = 32;
 
@@ -73,12 +80,23 @@ pub(crate) fn parse(text: &str) -> Option<Report> {
                 && !cwd.chars().any(char::is_control)
         })
         .map(str::to_owned);
+    let transcript = value
+        .get("transcript")
+        .and_then(serde_json::Value::as_str)
+        .filter(|path| {
+            path.len() <= CWD_LIMIT
+                && Path::new(path).is_absolute()
+                && !path.chars().any(char::is_control)
+                && path.ends_with(".jsonl")
+        })
+        .map(str::to_owned);
     Some(Report {
         state,
         since,
         subagents,
         tool,
         cwd,
+        transcript,
     })
 }
 
@@ -100,6 +118,54 @@ pub(crate) fn read_reports(dir: &Path, pane_ids: &[String]) -> HashMap<String, R
         .iter()
         .filter_map(|id| Some((id.clone(), read_report(dir, id)?)))
         .collect()
+}
+
+/// The Claude settings file under `$HOME`, `None` without one.
+pub(crate) fn settings_path() -> Option<PathBuf> {
+    std::env::var_os("HOME")
+        .filter(|home| !home.is_empty())
+        .map(|home| Path::new(&home).join(".claude").join("settings.json"))
+}
+
+/// The latest model and context size in the last `TRANSCRIPT_TAIL` bytes of
+/// the transcript at `path`; unreadable or empty is none.
+fn read_transcript_stats(path: &Path) -> Option<Stats> {
+    let mut file = std::fs::File::open(path).ok()?;
+    let len = file.metadata().ok()?.len();
+    file.seek(SeekFrom::Start(len.saturating_sub(TRANSCRIPT_TAIL)))
+        .ok()?;
+    let mut bytes = Vec::new();
+    file.take(TRANSCRIPT_TAIL).read_to_end(&mut bytes).ok()?;
+    parse_transcript_tail(&String::from_utf8_lossy(&bytes))
+}
+
+/// The stats of every report that names a transcript, keyed by pane id.
+pub(crate) fn read_stats(reports: &HashMap<String, Report>) -> HashMap<String, Stats> {
+    reports
+        .iter()
+        .filter_map(|(id, report)| {
+            let stats = read_transcript_stats(Path::new(report.transcript.as_deref()?))?;
+            Some((id.clone(), stats))
+        })
+        .collect()
+}
+
+/// `autoCompactWindow` from the settings file at `path`; absent, oversize or
+/// invalid is none.
+pub(crate) fn read_compact_limit(path: &Path) -> Option<u64> {
+    let mut bytes = Vec::new();
+    std::fs::File::open(path)
+        .ok()?
+        .take(SETTINGS_MAX + 1)
+        .read_to_end(&mut bytes)
+        .ok()?;
+    if bytes.len() as u64 > SETTINGS_MAX {
+        return None;
+    }
+    serde_json::from_slice::<serde_json::Value>(&bytes)
+        .ok()?
+        .get("autoCompactWindow")?
+        .as_u64()
 }
 
 #[cfg(test)]
@@ -169,6 +235,37 @@ mod tests {
     }
 
     #[test]
+    fn the_transcript_is_kept_only_when_absolute_clean_and_jsonl() {
+        let transcript = |value: &str| {
+            parse(&format!(
+                r#"{{"state":"waiting","since":1,"cwd":"/w","transcript":{}}}"#,
+                serde_json::to_string(value).unwrap()
+            ))
+            .unwrap()
+        };
+        let ok = transcript("/Users/me/.claude/projects/x/abc.jsonl");
+        assert_eq!(
+            ok.transcript.as_deref(),
+            Some("/Users/me/.claude/projects/x/abc.jsonl")
+        );
+        for bad in ["rel/a.jsonl", "/a/b\nc.jsonl", "/a/b.json", "/a/b.txt", ""] {
+            let report = transcript(bad);
+            assert_eq!(report.transcript, None, "{bad:?}");
+            assert_eq!(report.cwd.as_deref(), Some("/w"), "{bad:?}");
+        }
+        assert_eq!(
+            transcript(&format!("/{}.jsonl", "a".repeat(1024))).transcript,
+            None
+        );
+        assert_eq!(
+            parse(r#"{"state":"waiting","since":1}"#)
+                .unwrap()
+                .transcript,
+            None
+        );
+    }
+
+    #[test]
     fn bad_reports_are_none() {
         for text in [
             "",
@@ -206,7 +303,7 @@ mod tests {
         assert_eq!((ok.state, ok.since), (ReportState::Thinking, 7));
         assert_eq!(read_report(&dir, "missing"), None);
 
-        let padding = " ".repeat(2048);
+        let padding = " ".repeat(4096);
         std::fs::write(
             dir.join("big.json"),
             format!(r#"{{"state":"thinking","since":7}}{padding}"#),

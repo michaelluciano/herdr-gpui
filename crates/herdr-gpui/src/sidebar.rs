@@ -4,6 +4,7 @@
 mod accessibility;
 mod activity;
 mod agent_line;
+mod agent_stats;
 mod agents;
 mod animated;
 mod cell;
