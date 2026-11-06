@@ -12,11 +12,12 @@ use std::{
 };
 
 mod glyph;
+mod stats;
 
-struct Dir(PathBuf);
+pub(super) struct Dir(PathBuf);
 
 impl Dir {
-    fn new(name: &str) -> Self {
+    pub(super) fn new(name: &str) -> Self {
         let dir =
             std::env::temp_dir().join(format!("herdr-activity-poll-{name}-{}", std::process::id()));
         std::fs::remove_dir_all(&dir).ok();
@@ -24,7 +25,7 @@ impl Dir {
         Self(dir)
     }
 
-    fn report(&self, pane: &str, state: &str, age: u64) {
+    pub(super) fn report(&self, pane: &str, state: &str, age: u64) {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -37,7 +38,7 @@ impl Dir {
         .unwrap();
     }
 
-    fn path(&self) -> &Path {
+    pub(super) fn path(&self) -> &Path {
         &self.0
     }
 }
@@ -48,7 +49,7 @@ impl Drop for Dir {
     }
 }
 
-fn counted(
+pub(super) fn counted(
     cx: &mut gpui::TestAppContext,
 ) -> (Entity<HerdrWindow>, Rc<Cell<usize>>, &mut VisualTestContext) {
     let notified = Rc::new(Cell::new(0));
@@ -73,9 +74,14 @@ fn counted(
     (view, notified, cx)
 }
 
-fn poll(view: &Entity<HerdrWindow>, cx: &mut VisualTestContext, at: Instant, dir: &Dir) {
+pub(super) fn poll(view: &Entity<HerdrWindow>, cx: &mut VisualTestContext, at: Instant, dir: &Dir) {
     let path = dir.path().to_owned();
-    cx.update(|_, cx| view.update(cx, |view, cx| view.poll_agent_activity_at(at, path, cx)));
+    let settings = dir.path().join("settings.json");
+    cx.update(|_, cx| {
+        view.update(cx, |view, cx| {
+            view.poll_agent_activity_at(at, path, Some(settings), cx)
+        })
+    });
     cx.run_until_parked();
 }
 

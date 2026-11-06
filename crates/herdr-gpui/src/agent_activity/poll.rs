@@ -2,7 +2,8 @@
 
 use super::{
     label::{Label, Report, activity_label},
-    read::{read_reports, state_dir},
+    read::{read_compact_limit, read_reports, read_stats, settings_path, state_dir},
+    stats::Stats,
 };
 use crate::HerdrWindow;
 use gpui::Context;
@@ -20,6 +21,10 @@ pub(crate) const ACTIVITY_REFRESH: Duration = Duration::from_secs(2);
 #[derive(Debug, Default)]
 pub(crate) struct AgentActivity {
     reports: HashMap<String, Report>,
+    /// The transcript stats of the panes whose report names a transcript.
+    stats: HashMap<String, Stats>,
+    /// The auto-compact window in the Claude settings.
+    compact_limit: Option<u64>,
     /// A read finished, so labels may be shown; fixtures and a window with no
     /// `$HOME` keep the daemon's own state words.
     polled: bool,
@@ -55,6 +60,24 @@ impl AgentActivity {
         self.reports.get(pane_id)?.cwd.as_deref()
     }
 
+    /// Gives `pane_id` transcript stats.
+    #[cfg(test)]
+    pub(crate) fn set_test_stats(&mut self, pane_id: &str, model: &str, context: u64) {
+        self.stats.insert(
+            pane_id.to_owned(),
+            Stats {
+                model: model.to_owned(),
+                context,
+            },
+        );
+    }
+
+    /// Sets the auto-compact window.
+    #[cfg(test)]
+    pub(crate) fn set_test_limit(&mut self, limit: u64) {
+        self.compact_limit = Some(limit);
+    }
+
     /// Gives `pane_id` a report that names `cwd`.
     #[cfg(test)]
     pub(crate) fn set_test_cwd(&mut self, pane_id: &str, cwd: &str) {
@@ -67,8 +90,19 @@ impl AgentActivity {
                 subagents: 0,
                 tool: String::new(),
                 cwd: Some(cwd.to_owned()),
+                transcript: None,
             },
         );
+    }
+
+    /// The transcript stats of the Claude session in `pane_id`.
+    pub(crate) fn stats(&self, pane_id: &str) -> Option<&Stats> {
+        self.stats.get(pane_id)
+    }
+
+    /// The auto-compact window from the Claude settings, if set.
+    pub(crate) fn compact_limit(&self) -> Option<u64> {
+        self.compact_limit
     }
 
     fn labels(
@@ -130,7 +164,7 @@ impl HerdrWindow {
     /// Runs every window tick; reads the real directory when a read is due.
     pub(crate) fn poll_agent_activity(&mut self, cx: &mut Context<Self>) {
         if let Some(dir) = state_dir() {
-            self.poll_agent_activity_at(Instant::now(), dir, cx);
+            self.poll_agent_activity_at(Instant::now(), dir, settings_path(), cx);
         }
     }
 
@@ -140,6 +174,7 @@ impl HerdrWindow {
         &mut self,
         now: Instant,
         dir: PathBuf,
+        settings: Option<PathBuf>,
         cx: &mut Context<Self>,
     ) {
         let state = &mut self.agent_activity;
@@ -153,17 +188,22 @@ impl HerdrWindow {
         state.loading = true;
         let panes = self.local_claude_panes();
         let ids: Vec<String> = panes.iter().map(|(id, _)| id.clone()).collect();
-        let reading = cx
-            .background_executor()
-            .spawn(async move { read_reports(&dir, &ids) });
+        let reading = cx.background_executor().spawn(async move {
+            let reports = read_reports(&dir, &ids);
+            let stats = read_stats(&reports);
+            let limit = settings.as_deref().and_then(read_compact_limit);
+            (reports, stats, limit)
+        });
         cx.spawn(async move |this, cx| {
-            let reports = reading.await;
+            let (reports, stats, limit) = reading.await;
             this.update(cx, |this, cx| {
                 let state = &mut this.agent_activity;
                 state.loading = false;
                 let shown = state.labels(&panes, &reports, epoch_now());
                 let changed = !state.polled || shown != state.shown;
                 state.reports = reports;
+                state.stats = stats;
+                state.compact_limit = limit;
                 state.shown = shown;
                 state.polled = true;
                 if changed {

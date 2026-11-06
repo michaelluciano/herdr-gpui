@@ -6,6 +6,7 @@
 
 use super::{
     super::{
+        agent_stats::{letter_element, letter_width},
         agents::{icon_mark, status_style},
         cell::{AgentRow, RowContext, RowLayout, RowState, WorkspaceRow},
         line_height,
@@ -368,7 +369,14 @@ impl RowLayout for Superset {
         }
         // The agent's pane, then where it runs, trail its name, each never over
         // half the row.
+        let stats = agent.stats.as_ref();
         let line = line
+            .when_some(stats.and_then(|stats| stats.letter), |line, letter| {
+                line.fixed(
+                    letter_width(cx.font),
+                    letter_element(letter, theme.muted, cx.font),
+                )
+            })
             .lead(
                 div()
                     .debug_selector(|| format!("name-{key}"))
@@ -414,6 +422,10 @@ impl RowLayout for Superset {
                     m.glyph,
                     0.3,
                 )
+            })
+            .when_some(stats, |line, stats| {
+                line.spacer()
+                    .fixed(stats.context_width(cx.font), stats.context_element(cx.font))
             });
         shell(key, state, 0., line, cx)
     }

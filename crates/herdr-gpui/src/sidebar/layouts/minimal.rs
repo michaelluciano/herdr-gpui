@@ -6,6 +6,7 @@
 use super::{
     super::{
         ARROW_RESERVE,
+        agent_stats::{letter_element, letter_width},
         cell::{AgentRow, RowContext, RowLayout, RowState, WorkspaceRow},
         line_height,
         row::{Elbow, RowKind, RowTree, TokenLook, guide, left_behind, row_text, token_column},
@@ -196,12 +197,19 @@ impl RowLayout for Minimal {
             );
             return shell(&agent.key, state, 0., (line, Some(lines)), cx);
         }
+        let stats = agent.stats.as_ref();
         let line = line
             .fixed(
                 cx.indicators.width(font),
                 parts::status(agent.status, false, cx),
             )
             .fixed(icon, parts::icon(agent.icon.path(), icon, color))
+            .when_some(stats.and_then(|stats| stats.letter), |line, letter| {
+                line.fixed(
+                    letter_width(font),
+                    letter_element(letter, theme.muted, font),
+                )
+            })
             .lead(
                 name(&agent.key, kind, state, false, theme),
                 agent.name,
@@ -232,6 +240,10 @@ impl RowLayout for Minimal {
                     parts::glyph_at(font, font.size),
                     0.3,
                 )
+            })
+            .when_some(stats, |line, stats| {
+                line.spacer()
+                    .fixed(stats.context_width(font), stats.context_element(font))
             });
         shell(&agent.key, state, 0., (line, None), cx)
     }

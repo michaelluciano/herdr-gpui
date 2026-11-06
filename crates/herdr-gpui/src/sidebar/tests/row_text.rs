@@ -192,6 +192,7 @@ fn cells_hand_their_state_and_data_to_the_layout() {
             status_icon: None,
             status_text: None,
             status_color: None,
+            stats: None,
             lines: vec![],
         }),
         &cx,
