@@ -907,6 +907,10 @@ impl HerdrWindow {
                                             )
                                         },
                                         cx,
+                                    ) || this.move_agent_drag(
+                                        event.position,
+                                        event.pressed_button == Some(MouseButton::Left),
+                                        cx,
                                     ) || this.move_device_drag(
                                         event.position,
                                         event.pressed_button == Some(MouseButton::Left),
@@ -955,6 +959,7 @@ impl HerdrWindow {
                                 let _ = released.update(cx, |this, cx| {
                                     // A lifted row's release is its drop, not a click.
                                     if this.release_workspace_drag(cx)
+                                        || this.release_agent_drag(cx)
                                         || this.release_device_drag(cx)
                                     {
                                         cx.stop_propagation();

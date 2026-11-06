@@ -33,6 +33,7 @@ impl HerdrWindow {
         let multi = self.endpoints.len() > 1;
         let mut count = 0;
         let mut focused = None;
+        let draggable = self.agent_drag_enabled();
         for (index, agent) in self.panel_agents() {
             let Some(endpoint) = self.endpoints.get(index) else {
                 continue;
@@ -68,8 +69,8 @@ impl HerdrWindow {
             }
             let gap = self.agent_row_gap(count);
             count += 1;
-            list =
-                list.child(self.agent_cell(index, agent, snapshot, &row_cx, lines, gap, false, cx));
+            let row = self.agent_cell(index, agent, snapshot, &row_cx, lines, gap, false, cx);
+            list = list.child(self.agent_drag_row(row, &agent.pane_id, count - 1, draggable, cx));
         }
         (list, count, focused)
     }

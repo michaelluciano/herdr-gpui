@@ -316,6 +316,7 @@ impl HerdrWindow {
             wake: endpoint::WakeClock::now(),
             wheel: WheelAccumulator::default(),
             workspace_drag: None,
+            agent_drag: None,
             worktree_script: None,
             wsl_paste: None,
             zen: Default::default(),

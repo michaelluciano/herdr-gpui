@@ -3,6 +3,7 @@
 
 mod accessibility;
 mod activity;
+mod agent_drag;
 mod agent_line;
 mod agent_lock;
 mod agents;
@@ -43,6 +44,7 @@ pub(crate) mod native_tests;
 
 pub(crate) use {
     activity::{Activity, ActivityPanel},
+    agent_drag::AgentDrag,
     agents::{Indicators, agent_name, state_label, status_indicator, status_text},
     device_drag::DeviceDrag,
     hover::{HoverMenu, HoverRest},

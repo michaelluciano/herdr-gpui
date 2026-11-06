@@ -422,6 +422,8 @@ pub(crate) struct HerdrWindow {
     pub(crate) wheel: WheelAccumulator,
     /// A press on a workspace row that may lift it for reordering.
     pub(crate) workspace_drag: Option<sidebar::WorkspaceDrag>,
+    /// A press or lift on an agent row, for reordering the agents panel.
+    pub(crate) agent_drag: Option<sidebar::AgentDrag>,
     /// The worktree script being located, read, trusted, or opened.
     pub(crate) worktree_script: Option<crate::worktree_scripts::Job>,
     /// Files dropped on a WSL pane whose paths are still being mapped; input
