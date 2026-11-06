@@ -2,7 +2,7 @@
 //! next, and numbered shortcuts step through, as Herdr's TUI steps through
 //! its own sidebar: every listed host's rows, top to bottom.
 
-use super::{agents::panel_agents, visible_workspace_entries};
+use super::{agent_lock, agents::panel_agents, visible_workspace_entries};
 use crate::{HerdrWindow, controls::Command, state::LiveState};
 use herdr_client::protocol::{ClientShellAgent, ClientShellSnapshot};
 
@@ -12,7 +12,7 @@ pub(crate) type Row<'a> = (usize, &'a str);
 
 impl HerdrWindow {
     /// Each host the sidebar lists, with the live state it draws from.
-    fn listed_lives(&self) -> impl Iterator<Item = (usize, &LiveState)> {
+    pub(super) fn listed_lives(&self) -> impl Iterator<Item = (usize, &LiveState)> {
         self.displayed_devices()
             .into_iter()
             .filter(|(_, endpoint)| endpoint.enabled && self.device_visible(&endpoint.id))
@@ -54,7 +54,18 @@ impl HerdrWindow {
     /// The agents the panel paints, by host index, in its order. Painting
     /// and stepping both read it, so a shortcut lands on the row below.
     pub(super) fn panel_agents(&self) -> Vec<(usize, &ClientShellAgent)> {
-        panel_agents(self.listed_lives(), self.agent_sort)
+        let rows = panel_agents(self.listed_lives(), self.agent_sort);
+        // A plugin's agent view is authoritative, so the lock stands aside.
+        let viewed = self.listed_lives().any(|(_, live)| {
+            live.snapshot
+                .as_deref()
+                .is_some_and(|snapshot| snapshot.agent_view_label.is_some())
+        });
+        if self.agent_lock && !viewed {
+            agent_lock::apply(rows, &self.agent_frozen)
+        } else {
+            rows
+        }
     }
 
     /// The agent panel's rows, whether or not the panel is shown, as Herdr

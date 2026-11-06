@@ -113,6 +113,13 @@ pub(crate) struct HerdrWindow {
     pub(crate) active: bool,
     /// The activity bar's panel and filter.
     pub(crate) activity: sidebar::Activity,
+    /// Whether the agent panel keeps `agent_frozen`'s order instead of
+    /// re-sorting itself.
+    pub(crate) agent_lock: bool,
+    /// Whether the user toggled the lock, now or in a stored session.
+    pub(crate) agent_lock_modified: bool,
+    /// The pane IDs in the order the panel was locked at.
+    pub(crate) agent_frozen: Vec<String>,
     pub(crate) agent_sort: preferences::AgentSort,
     /// Whether the user chose the sort with the panel toggle, now or in a
     /// stored session. Until then the daemon's `ui.agent_panel_sort` decides,
@@ -415,6 +422,8 @@ pub(crate) struct HerdrWindow {
     pub(crate) wheel: WheelAccumulator,
     /// A press on a workspace row that may lift it for reordering.
     pub(crate) workspace_drag: Option<sidebar::WorkspaceDrag>,
+    /// A press or lift on an agent row, for reordering the agents panel.
+    pub(crate) agent_drag: Option<sidebar::AgentDrag>,
     /// The worktree script being located, read, trusted, or opened.
     pub(crate) worktree_script: Option<crate::worktree_scripts::Job>,
     /// Files dropped on a WSL pane whose paths are still being mapped; input
@@ -530,6 +539,11 @@ impl HerdrWindow {
         {
             self.agent_sort = sort;
             self.agent_sort_modified = true;
+        }
+        // A lock toggled before the stored one loaded keeps its own order.
+        if !self.agent_lock_modified {
+            self.agent_lock = chrome.agent_lock;
+            self.agent_frozen = chrome.agent_frozen;
         }
         // Saved once the whole chrome is merged, so the save keeps it all.
         if resave {

@@ -5,7 +5,7 @@
 use super::{
     DEVICE_FOOTER_HEIGHT, ICON_RESERVE, STATUS_WIDTH, SidebarDrag,
     agents::Indicators,
-    agents_sort,
+    agents_lock, agents_sort,
     cell::{Cell, Fold, RowContext, RowData, WorkspaceRow, layout_for},
     label_text,
     layout::{self},
@@ -830,9 +830,15 @@ impl HerdrWindow {
                             // rows, so the header stays to say so.
                             .when(self.config.show_agents_header || filtered, |section| {
                                 section.child(
-                                    header("agents", font, theme, look)
-                                        .justify_between()
-                                        .child(agents_sort(self, cx)),
+                                    header("agents", font, theme, look).justify_between().child(
+                                        div()
+                                            .flex()
+                                            .flex_none()
+                                            .min_w_0()
+                                            .gap(px(8.))
+                                            .child(agents_sort(self, cx))
+                                            .children(agents_lock(self, cx)),
+                                    ),
                                 )
                             })
                             .child(agents),
@@ -901,6 +907,10 @@ impl HerdrWindow {
                                             )
                                         },
                                         cx,
+                                    ) || this.move_agent_drag(
+                                        event.position,
+                                        event.pressed_button == Some(MouseButton::Left),
+                                        cx,
                                     ) || this.move_device_drag(
                                         event.position,
                                         event.pressed_button == Some(MouseButton::Left),
@@ -949,6 +959,7 @@ impl HerdrWindow {
                                 let _ = released.update(cx, |this, cx| {
                                     // A lifted row's release is its drop, not a click.
                                     if this.release_workspace_drag(cx)
+                                        || this.release_agent_drag(cx)
                                         || this.release_device_drag(cx)
                                     {
                                         cx.stop_propagation();
