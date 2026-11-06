@@ -260,8 +260,11 @@ fn the_agents_header_toggles_between_grouped_and_priority(cx: &mut gpui::TestApp
     let (first, second) = ("row-agent-p0", "row-agent-p1");
     let sort = cx.debug_bounds("agents-sort").unwrap();
     let header = cx.debug_bounds("sidebar").unwrap();
-    // The label ends at the sidebar's inner edge, opposite the "agents" title.
-    assert_eq!(sort.right(), header.right() - px(13.));
+    // The lock follows the label and ends at the sidebar's inner edge,
+    // opposite the "agents" title.
+    let lock = cx.debug_bounds("agents-lock").unwrap();
+    assert!(sort.right() < lock.left());
+    assert_eq!(lock.right(), header.right() - px(13.));
     for (expected, top) in [(AgentSort::Grouped, first), (AgentSort::Priority, second)] {
         cx.update(|_, cx| {
             assert_eq!(view.read(cx).agent_sort, expected);
@@ -295,6 +298,71 @@ fn the_agents_header_toggles_between_grouped_and_priority(cx: &mut gpui::TestApp
         assert_eq!(view.agent_sort, AgentSort::Grouped);
         assert!(view.agent_sort_modified);
     });
+}
+
+/// The lock freezes the painted order at the click: statuses that would
+/// reorder the Priority sort change nothing until the lock is off again.
+#[gpui::test]
+fn the_agent_lock_freezes_the_painted_order(cx: &mut gpui::TestAppContext) {
+    use crate::preferences::AgentSort;
+    let (fixture, cx) = cx.add_window_view(|window, cx| {
+        crate::bind_keys(cx);
+        let view = cx.new(|cx| fixture_window(window, cx));
+        cx.observe(&view, |_, _, cx| cx.notify()).detach();
+        SidebarFixture(view)
+    });
+    let view = cx.update(|_, cx| fixture.read(cx).0.clone());
+    let set_statuses = |cx: &mut gpui::VisualTestContext, statuses: [AgentStatus; 2]| {
+        cx.update(|window, cx| {
+            view.update(cx, |view, _| {
+                let snapshot = Arc::make_mut(view.live.snapshot.as_mut().unwrap());
+                for (agent, status) in snapshot.agents.iter_mut().zip(statuses) {
+                    agent.agent_status = status;
+                    agent.state_change_seq = 1;
+                }
+            });
+            window.refresh();
+            full_draw(window, cx).clear(cx);
+        });
+    };
+    let first_is_above =
+        |cx: &mut gpui::VisualTestContext, first: &'static str, second: &'static str| {
+            let (a, b) = (
+                cx.debug_bounds(first).unwrap(),
+                cx.debug_bounds(second).unwrap(),
+            );
+            a.top() < b.top()
+        };
+    cx.update(|_, cx| {
+        view.update(cx, |view, _| view.agent_sort = AgentSort::Priority);
+    });
+    cx.simulate_resize(size(px(800.), px(600.)));
+    cx.run_until_parked();
+    set_statuses(cx, [AgentStatus::Working, AgentStatus::Idle]);
+    let (first, second) = ("row-agent-p0", "row-agent-p1");
+    assert!(first_is_above(cx, first, second));
+
+    let lock = cx.debug_bounds("agents-lock").unwrap();
+    cx.simulate_click(lock.center(), Default::default());
+    cx.update(|_, cx| {
+        let view = view.read(cx);
+        assert!(view.agent_lock);
+        assert!(view.agent_lock_modified);
+    });
+    // Priority alone would now put the blocked second agent on top.
+    set_statuses(cx, [AgentStatus::Working, AgentStatus::Blocked]);
+    assert!(first_is_above(cx, first, second));
+
+    let lock = cx.debug_bounds("agents-lock").unwrap();
+    cx.simulate_click(lock.center(), Default::default());
+    cx.update(|window, cx| {
+        let view = view.read(cx);
+        assert!(!view.agent_lock);
+        assert!(view.agent_frozen.is_empty());
+        window.refresh();
+        full_draw(window, cx).clear(cx);
+    });
+    assert!(first_is_above(cx, second, first));
 }
 
 /// A plugin's agent view names the panel and decides its rows: the daemon's
