@@ -26,18 +26,28 @@ impl HerdrWindow {
                 .role(Role::Group)
                 .aria_label("Listening ports")
                 .flex()
-                .flex_none()
+                .flex_shrink(1.)
+                .min_w_0()
                 .items_center()
                 .h_full()
                 .px(px(6.))
-                .child(chips(
-                    listed,
-                    (endpoint, workspace),
-                    &self.tunnels,
-                    &self.theme,
-                    14.,
-                    cx,
-                )),
+                // Scrolls sideways when the ports outgrow the room the bar
+                // leaves, instead of running under the neighbouring items.
+                .child(
+                    div()
+                        .id("listening-ports-scroll")
+                        .debug_selector(|| "listening-ports-scroll".into())
+                        .min_w_0()
+                        .overflow_x_scroll()
+                        .child(chips(
+                            listed,
+                            (endpoint, workspace),
+                            &self.tunnels,
+                            &self.theme,
+                            14.,
+                            cx,
+                        )),
+                ),
         )
     }
 
