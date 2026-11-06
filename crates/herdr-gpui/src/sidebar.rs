@@ -25,6 +25,7 @@ mod reorder;
 mod row;
 mod search;
 pub(crate) mod slide;
+mod split_floor;
 mod sticky;
 mod tokens;
 mod unified;
