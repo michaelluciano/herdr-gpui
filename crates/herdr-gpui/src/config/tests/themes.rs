@@ -10,7 +10,7 @@ fn primary_selection_text_contrasts_in_every_builtin_theme() {
         let theme = Theme::builtin(name).unwrap_or_else(|| panic!("missing theme {name}"));
         // The default theme ships its own accent; every other one uses ANSI 5.
         let accent = if *name == "Default" {
-            0xa99be0
+            0x5cc8c0
         } else {
             theme.palette[5]
         };
