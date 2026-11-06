@@ -59,6 +59,7 @@ pub(crate) use {
     workspaces::{workspace_entries, workspace_label},
 };
 
+pub(crate) use gh_chip::GH_CHIP_HEIGHT;
 pub(crate) use layout::SidebarMetrics;
 pub(crate) use llm_rows::blocked_message;
 pub(crate) use order::step as sidebar_step;
