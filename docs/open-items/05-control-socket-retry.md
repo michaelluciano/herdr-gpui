@@ -1,6 +1,6 @@
 # Control socket never retries its bind
 
-Status: fixed on `fix/control-socket-retry` (commit `1aec0a19`). The pull request waits on PR 31, which makes `just ci` runnable on main. A real-window check is still to do.
+Status: fixed on `fix/control-socket-retry` (PR pending). A real-window check is still to do.
 
 ## Problem
 
