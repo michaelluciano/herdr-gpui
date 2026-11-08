@@ -1,6 +1,6 @@
 # Control socket never retries its bind
 
-Status: bug
+Status: fixed on `fix/control-socket-retry` (commit `1aec0a19`). The pull request waits on PR 31, which makes `just ci` runnable on main. A real-window check is still to do.
 
 ## Problem
 
@@ -16,6 +16,12 @@ The control socket (`control.sock`) is bound by the first app instance only. A s
 - Retry on a timer or watch the socket path; a timer is simpler.
 - How to avoid two instances racing to bind at the same moment (the existing stale-socket handling in `install` must still decide a winner).
 - Retry interval and whether to log each failed attempt.
+
+## What was done
+
+- `install` in `crates/herdr-gpui/src/control/server.rs` now retries the bind every two seconds (`REBIND_EVERY`) while a live server holds the socket, off the UI thread, and starts serving on the first success. Only the instance that holds the socket removes it on quit. Any other bind error still stops with the existing warning.
+- Test: `control/server/tests/rebind.rs` checks that a second install does not take a live socket and takes it once the first is released. It is Unix-only; the Windows named pipe path is not tested. All 182 `control::` tests, `cargo fmt` and clippy pass.
+- Still open from the questions below: the retry is a timer, not a watch; a failed attempt is logged once, not per attempt.
 
 ## Workaround
 
