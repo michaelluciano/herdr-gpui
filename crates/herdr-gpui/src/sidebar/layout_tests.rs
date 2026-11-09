@@ -26,6 +26,7 @@ mod agent_line;
 mod agent_menu;
 #[cfg(test)]
 mod agent_rows;
+#[cfg(test)]
 mod agent_stats;
 #[cfg(test)]
 mod agents_header;
