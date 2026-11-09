@@ -8,7 +8,7 @@ SVG = "{http://www.w3.org/2000/svg}"
 # The teal palette matches the flat colors of the macOS worktree PNG.
 PALETTES = {
     "herdr-linux.svg": ("#f4f1e9", "#303438"),
-    "herdr-linux-worktree.svg": ("#5cc8c0", "#1d5f5c"),
+    "herdr-linux-worktree.svg": ("#6ae1df", "#338b8c"),
 }
 
 

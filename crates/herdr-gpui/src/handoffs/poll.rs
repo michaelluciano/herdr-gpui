@@ -1,10 +1,12 @@
-//! The five second refresh of the handoff board.
+//! The refresh of the handoff board: a one second check of the root, and a
+//! full read when it changed or five seconds passed.
 
 use super::{
     classify::{Board, classify_with},
     dismissed,
     list::{Handoff, list_all},
     pinned,
+    signature::signature,
 };
 use crate::HerdrWindow;
 use crate::state_file;
@@ -16,8 +18,11 @@ use std::{
     time::{Duration, Instant},
 };
 
-/// How often the handoff directory is read.
+/// The longest the handoff directory goes unread.
 pub(crate) const HANDOFF_REFRESH: Duration = Duration::from_secs(5);
+
+/// How often the root's fingerprint is compared; a change reads it at once.
+pub(crate) const HANDOFF_CHECK: Duration = Duration::from_secs(1);
 
 /// The window's handoff board and when it was last read.
 #[derive(Debug, Default)]
@@ -33,7 +38,12 @@ pub(crate) struct Handoffs {
     pin_saver: Option<Saver>,
     /// The saved set was read.
     restored: bool,
+    /// When the list was last read in full.
     pub(crate) last_poll: Option<Instant>,
+    /// When the root was last fingerprinted.
+    last_check: Option<Instant>,
+    /// The root's fingerprint at the last check.
+    fingerprint: Option<u64>,
     /// The section body is folded; its header stays.
     pub(crate) collapsed: bool,
     /// The history rows show below the active rows.
@@ -149,25 +159,35 @@ impl HerdrWindow {
         }
     }
 
-    /// Reads `root` off the UI thread when the last read is five seconds old
-    /// at `now`, and notifies only when the list changed.
+    /// Fingerprints `root` off the UI thread once a second, and lists it when
+    /// the fingerprint moved or the last full read is five seconds old at
+    /// `now`. Notifies only when the list changed.
     pub(crate) fn poll_handoffs_at(&mut self, now: Instant, root: PathBuf, cx: &mut Context<Self>) {
-        let due = self
+        let checked = self.handoffs.last_check;
+        if self.handoffs.loading
+            || checked.is_some_and(|at| now.saturating_duration_since(at) < HANDOFF_CHECK)
+        {
+            return;
+        }
+        let stale = self
             .handoffs
             .last_poll
             .is_none_or(|at| now.saturating_duration_since(at) >= HANDOFF_REFRESH);
-        if self.handoffs.loading || !due {
-            return;
-        }
-        self.handoffs.last_poll = Some(now);
+        let known = self.handoffs.fingerprint;
+        self.handoffs.last_check = Some(now);
         self.handoffs.loading = true;
-        let reading = cx
-            .background_executor()
-            .spawn(async move { list_all(&root) });
+        let reading = cx.background_executor().spawn(async move {
+            let current = signature(&root);
+            let moved = known != Some(current);
+            ((stale || moved).then(|| list_all(&root)), current)
+        });
         cx.spawn(async move |this, cx| {
-            let list = reading.await;
+            let (list, current) = reading.await;
             this.update(cx, |this, cx| {
                 this.handoffs.loading = false;
+                this.handoffs.fingerprint = Some(current);
+                let Some(list) = list else { return };
+                this.handoffs.last_poll = Some(now);
                 let before = std::mem::take(&mut this.handoffs.board);
                 this.handoffs.set_list(list);
                 if this.handoffs.board != before {

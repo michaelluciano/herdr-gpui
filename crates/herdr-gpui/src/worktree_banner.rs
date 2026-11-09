@@ -19,8 +19,8 @@ pub(super) fn render(worktree: bool, branch: &str, pr: &str) -> Option<Div> {
             .w_full()
             .h(px(HEIGHT))
             .overflow_hidden()
-            .bg(rgb(0xf6c453))
-            .text_color(rgb(0x402b08))
+            .bg(rgb(0x5cc8c0))
+            .text_color(rgb(0x0f3b38))
             .text_size(px(12.))
             .child(
                 div()

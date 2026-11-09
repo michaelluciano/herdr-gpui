@@ -339,7 +339,7 @@ impl Default for Theme {
             surface: 0x2b2d31,
             active: 0x363849,
             muted: 0x9fa3ab,
-            accent: Some(0xa99be0),
+            accent: Some(0x5cc8c0),
             authored: Some(super::theme_tokens::SOFT_DARK),
             ..Self::neutral()
         }
