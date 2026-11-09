@@ -6,6 +6,7 @@
 
 use super::{
     super::{
+        agent_stats::{letter_element, letter_width},
         cell::{AgentRow, RowContext, RowLayout, RowState, WorkspaceRow},
         line_height,
         row::{Elbow, RowKind, RowTree, TokenLook, guide, left_behind, token_column},
@@ -355,14 +356,17 @@ impl RowLayout for Orca {
                 .child(column);
         }
         // The agent leads, then its pane, then where it runs, all on one line.
-        let text = Line::new(inner(cx, 0.) - icon - GAP, GAP)
+        let stats = agent.stats.as_ref();
+        let letter = stats.and_then(|stats| stats.letter);
+        let room = inner(cx, 0.) - icon - GAP - letter.map_or(0., |_| letter_width(font) + GAP);
+        let text = Line::new(room, GAP)
             .lead(
                 div()
                     .debug_selector(|| format!("name-{key}"))
                     .text_color(rgb(color)),
                 agent.name,
                 glyph_at(font, font.size),
-                parts::lead_share(inner(cx, 0.) - icon - GAP, glyph_at(font, font.size)),
+                parts::lead_share(room, glyph_at(font, font.size)),
             )
             .when_some(agent.pane, |line, pane| {
                 line.label(
@@ -393,12 +397,17 @@ impl RowLayout for Orca {
                     glyph_at(font, font.size),
                     0.3,
                 )
+            })
+            .when_some(stats, |line, stats| {
+                line.spacer()
+                    .fixed(stats.context_width(font), stats.context_element(font))
             });
         card(key, state, 0., 4., (theme, cx.mark))
             .h(px(line + 8.))
             .items_center()
             .child(status_column(parts::status(agent.status, false, cx), cx))
             .child(parts::icon(agent.icon.path(), icon, color))
+            .children(letter.map(|letter| letter_element(letter, theme.muted, font)))
             .child(text.into_div())
     }
 }

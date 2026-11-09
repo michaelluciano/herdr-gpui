@@ -7,6 +7,7 @@ use super::layout_tests;
 use super::{
     ARROW_RESERVE, ICON_RESERVE, STATUS_WIDTH,
     agent_line::{self, AgentLine},
+    agent_stats::{StatsMark, letter_element, letter_reserve, letter_x},
     agents::{Indicators, status_indicator},
     cell::{RowContext, RowState},
     glyph_width, line_height, segment_budgets,
@@ -428,6 +429,9 @@ pub(super) fn row(
     // An agent's second line in place of its detail text: the details move
     // under the name instead of beside it.
     agent_line: Option<AgentLine<'_>>,
+    // An agent's model letter and context size: the letter follows its icon,
+    // the context takes a column at the row's far right.
+    stats: Option<&StatsMark>,
     cx: &RowContext<'_>,
 ) -> Div {
     let (font, theme, look, width) = (cx.font, cx.theme, cx.look, cx.width);
@@ -457,6 +461,7 @@ pub(super) fn row(
         RowKind::Workspace if tree == RowTree::None => layout.workspace_details(),
         RowKind::Workspace => layout.child_details(),
     };
+    let letter = stats.and_then(|stats| stats.letter);
     let (name_color, weight, detail_color) = row_text(kind, focused, theme);
     let name_color = if teleported {
         left_behind(name_color, theme)
@@ -484,7 +489,12 @@ pub(super) fn row(
         0.
     };
     let status_gutter = if show_status { status_width + gap } else { 0. };
-    let available = (look.content_width(width) - status_gutter - indent - arrow_reserve).max(0.);
+    // The context column keeps its width at the row's far right, so every
+    // other column yields to it first.
+    let context_reserve = stats.map_or(0., |stats| stats.context_width(font) + gap);
+    let available =
+        (look.content_width(width) - status_gutter - indent - arrow_reserve - context_reserve)
+            .max(0.);
     // Narrow sidebars and large fonts can leave less room than a badge needs.
     // Clip its column within the row rather than painting over the terminal.
     let badge_width = badge.as_ref().map_or(0., |badge| {
@@ -512,7 +522,7 @@ pub(super) fn row(
     // the room left rather than painting past the row.
     // An agent's name keeps twelve characters before its status clips.
     let min_name = match kind {
-        RowKind::Agent(_) => 12. * glyph_width(font) + agent_icon_size(font).1,
+        RowKind::Agent(_) => 12. * glyph_width(font) + agent_icon_size(font, letter).1,
         RowKind::Workspace => 0.,
     };
     let status_width = status_text.map_or(0., |text| {
@@ -554,7 +564,7 @@ pub(super) fn row(
     // its location. Reserve the same fixed icon + gap on whichever line owns it.
     let agent_first = agent_icon.filter(|_| detail.is_empty());
     let agent_detail = agent_icon.filter(|_| !detail.is_empty());
-    let (agent_size, agent_reserve) = agent_icon_size(font);
+    let (agent_size, agent_reserve) = agent_icon_size(font, letter);
     let name_reserve = icon_reserve + agent_first.map_or(0., |_| agent_reserve);
     div()
         .debug_selector(|| format!("row-{key}"))
@@ -643,7 +653,14 @@ pub(super) fn row(
                                 .w(px(label_width))
                                 .h(px(line_height(font)))
                                 .when_some(agent_first, |line, icon| {
-                                    line.child(agent_mark(key, icon, agent_size, name_color, font))
+                                    line.child(agent_mark(
+                                        key,
+                                        icon,
+                                        agent_size,
+                                        name_color,
+                                        font,
+                                        letter.map(|letter| (letter, muted)),
+                                    ))
                                 })
                                 .when(workspace_icon.draws(), |title| {
                                     title.child(workspace_icon.slot(key, font, muted))
@@ -696,6 +713,7 @@ pub(super) fn row(
                                             agent_size,
                                             detail_color,
                                             font,
+                                            letter.map(|letter| (letter, muted)),
                                         ))
                                     })
                                     .child(
@@ -748,6 +766,7 @@ pub(super) fn row(
                     .child(upstream.element(key, glyph, theme)),
             )
         })
+        .when_some(stats, |row, stats| row.child(stats.context_element(font)))
         // The collapse column comes first so the badge can hug the row's edge.
         .when_some(arrow, |row, arrow| row.child(arrow))
         .when_some(badge, |row, badge| {
@@ -762,9 +781,11 @@ pub(super) fn row(
         })
 }
 
-pub(super) fn agent_icon_size(font: &FontConfig) -> (f32, f32) {
+/// The icon's size and the room it takes before the text, a model letter
+/// included.
+pub(super) fn agent_icon_size(font: &FontConfig, letter: Option<char>) -> (f32, f32) {
     let size = line_height(font).min(12.);
-    (size, size + 4.)
+    (size, size + 4. + letter_reserve(font, letter))
 }
 
 pub(super) fn agent_mark(
@@ -773,14 +794,22 @@ pub(super) fn agent_mark(
     size: f32,
     color: u32,
     font: &FontConfig,
+    letter: Option<(char, u32)>,
 ) -> Div {
+    let top = (line_height(font) - size) / 2.;
     div()
         .debug_selector(|| format!("agent-icon-{key}"))
         .absolute()
         .left_0()
-        .top(px((line_height(font) - size) / 2.))
+        .top(px(top))
         .size(px(size))
         .child(icon.element(size, color))
+        .children(letter.map(|(letter, muted)| {
+            letter_element(letter, muted, font)
+                .absolute()
+                .left(px(letter_x(size)))
+                .top(px(-top))
+        }))
 }
 
 pub(crate) fn label_text(text: &str) -> impl IntoElement {

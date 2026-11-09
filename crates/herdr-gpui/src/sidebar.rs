@@ -6,6 +6,7 @@ mod activity;
 mod agent_drag;
 mod agent_line;
 mod agent_lock;
+mod agent_stats;
 mod agents;
 mod animated;
 mod cell;

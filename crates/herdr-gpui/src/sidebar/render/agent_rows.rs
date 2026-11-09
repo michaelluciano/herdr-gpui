@@ -16,6 +16,26 @@ use gpui::{prelude::*, *};
 use herdr_client::protocol::{AgentStatus, ClientShellAgent, ClientShellSnapshot};
 
 impl HerdrWindow {
+    /// The letter and context of a local Claude agent's row, once its report
+    /// named a transcript; other agents and hosts show neither.
+    fn agent_stats_mark(
+        &self,
+        agent: &ClientShellAgent,
+        endpoint_id: &str,
+        theme: &crate::config::Theme,
+    ) -> Option<crate::sidebar::agent_stats::StatsMark> {
+        if endpoint_id != crate::endpoint::LOCAL || !crate::agent_activity::is_claude(agent) {
+            return None;
+        }
+        let activity = &self.agent_activity;
+        let stats = activity.stats(&agent.pane_id)?;
+        Some(crate::sidebar::agent_stats::StatsMark::new(
+            stats,
+            activity.compact_limit(),
+            theme,
+        ))
+    }
+
     /// Appends a row for each agent `panel_agents` lists, in that order, and
     /// returns the list with how many rows it painted and where the selected
     /// host's focused agent sits among them, for the reveal. A row's host
@@ -181,6 +201,7 @@ impl HerdrWindow {
                         .shows_status_text(agent.agent.as_deref()))
                 .then_some(state),
                 status_color,
+                stats: self.agent_stats_mark(agent, &endpoint_id, row_cx.theme),
                 lines,
             }),
             row_cx,

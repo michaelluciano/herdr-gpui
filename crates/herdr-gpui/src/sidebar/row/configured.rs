@@ -253,7 +253,7 @@ pub(super) fn configured_lines(
         line.iter()
             .any(|token| matches!(token.kind, TokenKind::Text(_, TextRole::Agent)))
     });
-    let (agent_size, agent_reserve) = agent_icon_size(font);
+    let (agent_size, agent_reserve) = agent_icon_size(font, None);
     let workspace_reserve = if matches!(workspace_icon, RowIcon::None) {
         0.
     } else {
@@ -279,7 +279,7 @@ pub(super) fn configured_lines(
             .unwrap_or(theme.muted);
         let mut text = div().relative().w(px(label_width)).h(px(line_height(font)));
         if agent_here && let Some(icon) = agent_icon {
-            text = text.child(agent_mark(key, icon, agent_size, icon_color, font));
+            text = text.child(agent_mark(key, icon, agent_size, icon_color, font, None));
         }
         if index == 0 && workspace_icon.draws() {
             text = text.child(std::mem::replace(&mut workspace_icon, RowIcon::None).slot(
