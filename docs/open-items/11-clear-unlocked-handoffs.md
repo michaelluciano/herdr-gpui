@@ -1,6 +1,6 @@
 # Clear handoffs that are not locked
 
-Status: not started; requested 2026-11-08
+Status: future item, not started; answers recorded 2026-11-08, build on request
 
 ## Goal
 
@@ -8,14 +8,17 @@ Give the Handoffs panel a way to clear every handoff that is not locked, so fini
 
 ## Decisions already made
 
-- The action clears only handoffs that are not locked; a locked handoff always stays.
+- The action clears past handoffs only: the picked-up and superseded rows. Active handoffs (the newest open one per project) are not cleared, and a locked handoff is never cleared.
+- Clearing means dismissal, so it is reversible with "Restore cleared" and no file is deleted.
+- No confirmation.
+- Locks and clears are shared: every machine and window that reads the same handoffs shows the same locked and cleared rows. Today each machine keeps its own state files, so this changes where they are stored.
+- "Clear picked up (N)" is not visible today because the bar only shows in the all view while something is picked up. The new action is one bar entry for both shelves, replacing "Clear picked up (N)", and it shows whenever there is a past row to clear (assumed; the answer did not say).
 
 ## Open questions
 
-- What "locked" means for a handoff. The session lock from PR 27 locks the agent panel's order and does not apply to handoff rows, so a per-handoff lock would be new: where it is stored (in the handoff root, so every client agrees, or in the app) and how a row shows and toggles it.
-- What "clear" does to the file: delete it, move it into `history/`, or only hide the row. Handoffs are files under the handoff root (`LATEST.md`, `sessions/`, `history/`), so a delete cannot be undone from the app.
-- Whether it asks for confirmation. The repository rules say destructive actions open the app's own dialog and the user confirms there.
-- Whether it applies to all projects or to the focused project only, and whether it belongs on the control socket (`docs/cli.md`) as well as in the panel.
+- Where the shared state lives and how it reaches other machines. The handoffs root is `~/claude-private/handoffs` on each machine (`root_under` in `handoffs/poll.rs`), so the natural place is a small file inside that root, read and written like the handoff files. That only reaches another machine if the root itself is shared or synced; check how it is today before choosing.
+- How the existing per-machine files (`handoff-pinned.json`, `handoff-dismissed.json`) move to the shared place without losing anyone's locks, and what happens when two machines change the set at once.
+- Whether Claude sessions that read the handoff root need to ignore the new file.
 
 ## Where to start
 
