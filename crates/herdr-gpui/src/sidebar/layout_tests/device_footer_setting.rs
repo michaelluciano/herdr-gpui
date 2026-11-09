@@ -69,7 +69,12 @@ fn device_footer_setting_hides_it_and_gives_agents_the_room(cx: &mut gpui::TestA
 fn split_drag_tracks_the_pointer_without_the_footer(cx: &mut gpui::TestAppContext) {
     use gpui::MouseButton;
 
-    let (view, cx) = cx.add_window_view(fixture_window);
+    // A short list, so the divider's floor leaves room to drag.
+    let (view, cx) = cx.add_window_view(|window, cx| {
+        let mut view = fixture_window(window, cx);
+        view.live.snapshot = Some(Arc::new(snapshot(1)));
+        view
+    });
     cx.simulate_resize(size(px(800.), px(600.)));
     for mode in [DeviceFooter::Auto, DeviceFooter::Never] {
         set_footer(&view, mode, cx);

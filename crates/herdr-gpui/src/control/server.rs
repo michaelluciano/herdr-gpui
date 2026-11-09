@@ -15,7 +15,7 @@ mod tabs;
 mod work;
 
 use super::{
-    Target, main_windows, plain,
+    Error, Target, main_windows, plain,
     protocol::{Caller, ErrorCode, MAX_WAIT_SECONDS, Request, Response},
     socket, socket_path, valid_caller,
 };
@@ -26,7 +26,7 @@ use crate::{
 use browser::{feedback, notes, open_browser, reload, serve_waiters};
 use gpui::{App, Context, Window, WindowHandle};
 use std::{
-    path::Path,
+    path::{Path, PathBuf},
     time::{Duration, Instant},
 };
 
@@ -312,26 +312,55 @@ fn keep_undelivered(request: super::protocol::FeedbackRequest, text: String, cx:
         });
 }
 
+/// How often a second app instance checks whether the first has let go of
+/// the control socket.
+const REBIND_EVERY: Duration = Duration::from_secs(2);
+
 /// Starts answering requests. A second app instance leaves the first one's
-/// socket alone and simply does not listen.
+/// socket alone and keeps trying to take it over, so it serves once the
+/// first one quits.
 pub(crate) fn install(cx: &mut App) {
-    let server = match socket_path().and_then(|path| Ok(socket::Server::bind(&path)?)) {
-        Ok(server) => server,
-        Err(error) => {
-            tracing::warn!(%error, "Control socket unavailable");
-            return;
-        }
-    };
-    tracing::info!(path = %server.path().display(), "Control socket listening");
-    let path = server.path().to_owned();
-    cx.on_app_quit(move |cx| {
-        let path = path.clone();
-        cx.background_executor()
-            .spawn(async move { socket::release(&path) })
-    })
-    .detach();
+    match socket_path() {
+        Ok(path) => install_at(path, cx),
+        Err(error) => tracing::warn!(%error, "Control socket unavailable"),
+    }
+}
+
+fn install_at(path: PathBuf, cx: &mut App) {
     let timer = cx.background_executor().clone();
     cx.spawn(async move |cx| {
+        let mut waiting = false;
+        let server = loop {
+            // Binding probes the socket with a connect, so it stays off the UI thread.
+            let attempt = timer.spawn({
+                let path = path.clone();
+                async move { socket::Server::bind(&path) }
+            });
+            match attempt.await {
+                Ok(server) => break server,
+                Err(Error::SocketInUse { .. }) => {
+                    if !waiting {
+                        tracing::info!(path = %path.display(), "Control socket held by another Herdr UI; will retry");
+                        waiting = true;
+                    }
+                    timer.timer(REBIND_EVERY).await;
+                }
+                Err(error) => {
+                    tracing::warn!(%error, "Control socket unavailable");
+                    return;
+                }
+            }
+        };
+        tracing::info!(path = %server.path().display(), "Control socket listening");
+        // Only the instance that holds the socket removes it on quit.
+        cx.update(|cx| {
+            cx.on_app_quit(move |cx| {
+                let path = path.clone();
+                cx.background_executor()
+                    .spawn(async move { socket::release(&path) })
+            })
+            .detach();
+        });
         let mut state = State::default();
         loop {
             timer.timer(Duration::from_millis(50)).await;

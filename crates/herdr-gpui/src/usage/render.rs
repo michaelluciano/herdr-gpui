@@ -89,7 +89,9 @@ impl HerdrWindow {
             div()
                 .flex()
                 .flex_1()
-                .min_w_0()
+                // A floor, or a wide neighbour (many listening ports) takes
+                // every pixel the bar has left.
+                .min_w(px(96.))
                 .h_full()
                 .items_center()
                 .gap(px(4.))

@@ -9,6 +9,7 @@ mod agents;
 mod animated;
 mod cell;
 mod device_drag;
+mod gh_chip;
 mod handoffs;
 mod header;
 mod host_row;
@@ -25,6 +26,7 @@ mod reorder;
 mod row;
 mod search;
 pub(crate) mod slide;
+mod split_floor;
 mod sticky;
 mod tokens;
 mod unified;
@@ -59,6 +61,7 @@ pub(crate) use {
     workspaces::{workspace_entries, workspace_label},
 };
 
+pub(crate) use gh_chip::GH_CHIP_HEIGHT;
 pub(crate) use layout::SidebarMetrics;
 pub(crate) use llm_rows::blocked_message;
 pub(crate) use order::step as sidebar_step;
