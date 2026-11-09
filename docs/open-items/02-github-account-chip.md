@@ -1,6 +1,6 @@
 # GitHub account chip
 
-Status: built on `feat/gh-account-chip` (2 commits); 390 sidebar tests, `cargo fmt` and `cargo clippy -D warnings` pass (2026-11-07). Needs a pull request and a real-window check.
+Status: PR 23 open on `feat/gh-account-chip` (2 commits, rebased onto main 2026-11-08); 4784 app tests, format, sorted and lint pass. `lint-linux`, `lint-windows` and the updater test were not run. Needs a real-window check.
 
 ## Goal
 
