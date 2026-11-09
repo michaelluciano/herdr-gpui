@@ -122,13 +122,13 @@ fn successors_first(found: &mut [Handoff]) {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum EntryKind {
+pub(super) enum EntryKind {
     Dir,
     File,
 }
 
 /// The children of `dir` of one kind; symlinks are neither.
-fn entries(dir: &Path, kind: EntryKind) -> Vec<PathBuf> {
+pub(super) fn entries(dir: &Path, kind: EntryKind) -> Vec<PathBuf> {
     let Ok(read) = std::fs::read_dir(dir) else {
         return Vec::new();
     };

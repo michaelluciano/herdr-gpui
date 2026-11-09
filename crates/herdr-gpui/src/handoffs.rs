@@ -9,6 +9,7 @@ mod line;
 mod list;
 mod pinned;
 mod poll;
+mod signature;
 mod target;
 
 #[cfg(test)]
