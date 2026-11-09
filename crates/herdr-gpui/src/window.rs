@@ -115,6 +115,13 @@ pub(crate) struct HerdrWindow {
     pub(crate) activity: sidebar::Activity,
     /// What each local Claude agent is doing, from its hooks' state files.
     pub(crate) agent_activity: crate::agent_activity::AgentActivity,
+    /// The pane IDs in the order the panel was locked at.
+    pub(crate) agent_frozen: Vec<String>,
+    /// Whether the agent panel keeps `agent_frozen`'s order instead of
+    /// re-sorting itself.
+    pub(crate) agent_lock: bool,
+    /// Whether the user toggled the lock, now or in a stored session.
+    pub(crate) agent_lock_modified: bool,
     pub(crate) agent_sort: preferences::AgentSort,
     /// Whether the user chose the sort with the panel toggle, now or in a
     /// stored session. Until then the daemon's `ui.agent_panel_sort` decides,
@@ -530,6 +537,11 @@ impl HerdrWindow {
         {
             self.agent_sort = sort;
             self.agent_sort_modified = true;
+        }
+        // A lock toggled before the stored one loaded keeps its own order.
+        if !self.agent_lock_modified {
+            self.agent_lock = chrome.agent_lock;
+            self.agent_frozen = chrome.agent_frozen;
         }
         // Saved once the whole chrome is merged, so the save keeps it all.
         if resave {

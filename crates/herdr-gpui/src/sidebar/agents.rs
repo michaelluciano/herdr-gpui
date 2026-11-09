@@ -52,6 +52,55 @@ pub(super) fn agents_sort(window: &HerdrWindow, cx: &mut Context<HerdrWindow>) -
         .child(label_text(&label))
 }
 
+/// The lock beside the sort label: on, the panel keeps the order it had when
+/// the lock was clicked. A plugin's view orders the rows itself, so none shows.
+pub(super) fn agents_lock(
+    window: &HerdrWindow,
+    cx: &mut Context<HerdrWindow>,
+) -> Option<Stateful<Div>> {
+    let theme = &window.theme;
+    if window
+        .live
+        .snapshot
+        .as_ref()
+        .is_some_and(|snapshot| snapshot.agent_view_label.is_some())
+    {
+        return None;
+    }
+    let color = if window.agent_lock {
+        theme.foreground
+    } else {
+        theme.muted
+    };
+    let lock = div()
+        .id("agents-lock")
+        .debug_selector(|| "agents-lock".into())
+        .flex_none()
+        .text_color(rgb(color))
+        .cursor_pointer()
+        .hover(|style| style.text_color(rgb(theme.foreground)))
+        .on_click(cx.listener(|this, _, _, cx| {
+            cx.stop_propagation();
+            this.agent_lock = !this.agent_lock;
+            this.agent_lock_modified = true;
+            this.agent_frozen = if this.agent_lock {
+                this.sidebar_agents()
+                    .into_iter()
+                    .map(|(_, pane)| pane.to_owned())
+                    .collect()
+            } else {
+                Vec::new()
+            };
+            this.save_chrome();
+            cx.notify();
+        }))
+        .child(label_text("lock"));
+    Some(window.chrome_stop(
+        crate::window::chrome_focus::Region::Sidebar,
+        lock.role(Role::Button).aria_label("Lock agent order"),
+    ))
+}
+
 /// Attention first, then the most recent change, as upstream orders it.
 pub(super) fn status_priority(status: AgentStatus) -> u8 {
     match status {
