@@ -86,6 +86,7 @@ fn nested_agents_sit_under_their_workspace_and_drop_the_agents_section(
         cx.debug_bounds("spaces-section").unwrap().size.height,
         cx.debug_bounds("sidebar").unwrap().size.height
             - cx.debug_bounds("device-footer").unwrap().size.height
+            - cx.debug_bounds("gh-chip").unwrap().size.height
     );
 
     show(&view, (true, AgentsPlacement::Panel), cx);

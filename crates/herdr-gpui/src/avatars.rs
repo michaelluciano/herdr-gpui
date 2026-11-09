@@ -292,7 +292,7 @@ fn answer(
 /// The GitHub owner behind a checkout's `upstream` remote, else its `origin`.
 /// Fails only when a remote host could not be read, or went offline before
 /// or during the read; local Git failures and absent remotes are `None`.
-fn repo_owner(
+pub(crate) fn repo_owner(
     checkout: Checkout<&str>,
     offline: &links::Offline,
 ) -> herdr_client::Result<Option<String>> {

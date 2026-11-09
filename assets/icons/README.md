@@ -93,7 +93,7 @@ future artwork changes to come from package upgrades again, then refresh the cac
 ### Windows
 
 `Herdr.ico` holds the rounded tile at 16, 20, 24, 32, 40, 48, 64, and 256 px, each
-a PNG rendered from `herdr-ui-icon-clean.svg`. Linked-worktree builds use the red
+a PNG rendered from `herdr-ui-icon-clean.svg`. Linked-worktree builds use the teal
 `Herdr-worktree.ico`, with the palette of the Linux worktree SVG. The build script
 (`crates/herdr-gpui/windows_resource.rs`) embeds it in the executable as icon
 resource 1, the one GPUI loads for its windows, so Explorer, the window, and the
@@ -151,7 +151,7 @@ highlights, translucency, and shadows are off, preserving the flat design.
 systems, under the icon name `Herdr` for both variants. Test the rendering with
 `NSWorkspace.icon(forFile:)` on a bundle, or in the Dock.
 
-The same generator uses CoreImage to map each rendered image's luminance to a red
+The same generator uses CoreImage to map each rendered image's luminance to a teal
 palette, retaining transparency, producing `herdr-worktree-1024.png`,
 `herdr-square-worktree-1024.png`, `Herdr-worktree.icns`, and
 `Herdr-worktree.car`; the catalog's two flat colors pass through the same mapping.

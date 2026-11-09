@@ -13,6 +13,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 mod repeated_scans;
 mod ssh_links;
 mod status_bar;
+mod status_bar_scroll;
 mod wsl_hosts;
 
 /// The ports one workspace was found with, whichever daemon it named.

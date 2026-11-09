@@ -19,8 +19,8 @@ RAM_FILL = 'fill="#303438" />'
 VARIANTS = {
     "Herdr.ico": {},
     "Herdr-worktree.ico": {
-        TILE_FILL: 'fill="#5cc8c0" />',
-        RAM_FILL: 'fill="#1d5f5c" />',
+        TILE_FILL: 'fill="#6ae1df" />',
+        RAM_FILL: 'fill="#338b8c" />',
     },
 }
 
