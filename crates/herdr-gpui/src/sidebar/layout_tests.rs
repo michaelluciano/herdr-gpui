@@ -55,6 +55,7 @@ mod handoffs;
 mod handoffs_colors;
 #[cfg(test)]
 mod handoffs_dismiss;
+#[cfg(test)]
 mod handoffs_edited;
 #[cfg(test)]
 mod handoffs_history;
@@ -754,6 +755,7 @@ pub(crate) fn fixture_window(window: &mut Window, cx: &mut Context<HerdrWindow>)
         sidebar_width: None,
         sidebar_drag: None,
         workspace_drag: None,
+        agent_drag: None,
         device_drag: None,
         device_order: Vec::new(),
         tab_drag: None,
@@ -761,6 +763,9 @@ pub(crate) fn fixture_window(window: &mut Window, cx: &mut Context<HerdrWindow>)
         sidebar_split_modified: false,
         sidebar_preferences: None,
         sidebar_modified: false,
+        agent_lock: false,
+        agent_lock_modified: false,
+        agent_frozen: Vec::new(),
         agent_sort: Default::default(),
         agent_sort_modified: false,
         avatars: None,

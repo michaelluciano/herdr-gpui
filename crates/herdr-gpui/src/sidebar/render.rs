@@ -3,16 +3,16 @@
 //! caches only.
 
 use super::{
-    DEVICE_FOOTER_HEIGHT, ICON_RESERVE, STATUS_WIDTH, SidebarDrag,
+    DEVICE_FOOTER_HEIGHT, GH_CHIP_HEIGHT, ICON_RESERVE, STATUS_WIDTH, SidebarDrag,
     agents::Indicators,
-    agents_sort,
+    agents_lock, agents_sort,
     cell::{Cell, Fold, RowContext, RowData, WorkspaceRow, layout_for},
     label_text,
     layout::{self},
     line_height,
     reorder::{self, Plan},
     row::{RowIcon, RowLift, RowTree},
-    sidebar_width, sticky,
+    sidebar_width, split_floor, sticky,
     tokens::{self, SpaceContext},
     visible_workspace_entries, wash,
     workspaces::{displayed_workspace_status, workspace_badge, workspace_label, workspace_note},
@@ -682,6 +682,8 @@ impl HerdrWindow {
                     })),
             );
         }
+        // The new/menu row under the list is spaces-section chrome too.
+        let spaces_foot = line_height(font) + 2. * layout.footer_padding();
         div()
             .id("sidebar")
             .debug_selector(|| "sidebar".into())
@@ -750,7 +752,7 @@ impl HerdrWindow {
                     .child(
                         div()
                             .flex_none()
-                            .h(px(line_height(font) + 2. * layout.footer_padding()))
+                            .h(px(spaces_foot))
                             .px(px(content_x))
                             .flex()
                             .items_center()
@@ -830,9 +832,15 @@ impl HerdrWindow {
                             // rows, so the header stays to say so.
                             .when(self.config.show_agents_header || filtered, |section| {
                                 section.child(
-                                    header("agents", font, theme, look)
-                                        .justify_between()
-                                        .child(agents_sort(self, cx)),
+                                    header("agents", font, theme, look).justify_between().child(
+                                        div()
+                                            .flex()
+                                            .flex_none()
+                                            .min_w_0()
+                                            .gap(px(8.))
+                                            .child(agents_sort(self, cx))
+                                            .children(agents_lock(self, cx)),
+                                    ),
                                 )
                             })
                             .child(agents),
@@ -841,7 +849,9 @@ impl HerdrWindow {
             .children(self.handoffs_section(devices, look, cx))
             .map(|sidebar| {
                 if self.device_footer_shown() {
-                    sidebar.child(self.render_device_footer(cx))
+                    sidebar
+                        .child(self.render_gh_chip(cx))
+                        .child(self.render_device_footer(cx))
                 } else {
                     sidebar.child(self.render_sessions_anchor())
                 }
@@ -901,6 +911,10 @@ impl HerdrWindow {
                                             )
                                         },
                                         cx,
+                                    ) || this.move_agent_drag(
+                                        event.position,
+                                        event.pressed_button == Some(MouseButton::Left),
+                                        cx,
                                     ) || this.move_device_drag(
                                         event.position,
                                         event.pressed_button == Some(MouseButton::Left),
@@ -920,19 +934,25 @@ impl HerdrWindow {
                                             }
                                             SidebarDrag::Split => {
                                                 let footer = if this.device_footer_shown() {
-                                                    DEVICE_FOOTER_HEIGHT
+                                                    DEVICE_FOOTER_HEIGHT + GH_CHIP_HEIGHT
                                                 } else {
                                                     0.
                                                 };
                                                 let height =
                                                     (f32::from(bounds.size.height) - 6. - footer)
                                                         .max(1.);
+                                                let floor = split_floor::drag_floor(
+                                                    &this.sidebar_scroll[0],
+                                                    f32::from(bounds.origin.y),
+                                                    spaces_foot,
+                                                    height,
+                                                );
                                                 this.sidebar_split = Some(
                                                     ((f32::from(
                                                         event.position.y - bounds.origin.y,
                                                     ) - 3.)
                                                         / height)
-                                                        .clamp(0.1, 0.9),
+                                                        .clamp(floor, split_floor::MAX_SPLIT),
                                                 );
                                             }
                                         }
@@ -949,6 +969,7 @@ impl HerdrWindow {
                                 let _ = released.update(cx, |this, cx| {
                                     // A lifted row's release is its drop, not a click.
                                     if this.release_workspace_drag(cx)
+                                        || this.release_agent_drag(cx)
                                         || this.release_device_drag(cx)
                                     {
                                         cx.stop_propagation();

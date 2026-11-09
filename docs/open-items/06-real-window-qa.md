@@ -1,6 +1,6 @@
 # Real-window QA
 
-Status: needs verification
+Status: needs verification at a desktop; no check below has been run since 2026-11-01
 
 ## Goal
 

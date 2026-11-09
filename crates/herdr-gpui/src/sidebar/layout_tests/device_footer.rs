@@ -183,3 +183,32 @@ fn add_device_form_keeps_input_local_and_validates_before_launch(cx: &mut gpui::
         assert!(view.read(cx).focus.is_focused(window));
     });
 }
+
+#[gpui::test]
+fn gh_chip_sits_directly_above_the_footer_and_leaves_with_it(cx: &mut gpui::TestAppContext) {
+    let (view, cx) = cx.add_window_view(fixture_window);
+    cx.update(|_, cx| {
+        cx.set_global(crate::sidebar::gh_chip::GhChipState::fixture(
+            "alice",
+            Some("bob"),
+        ))
+    });
+    cx.simulate_resize(size(px(800.), px(600.)));
+    cx.update(|window, cx| full_draw(window, cx).clear(cx));
+    let chip = cx.debug_bounds("gh-chip").unwrap();
+    let footer = cx.debug_bounds("device-footer").unwrap();
+    assert_eq!(chip.bottom(), footer.top());
+    assert_eq!(chip.left(), footer.left());
+    assert_eq!(chip.size.width, footer.size.width);
+    assert_eq!(chip.size.height, px(crate::sidebar::GH_CHIP_HEIGHT));
+    assert!(cx.debug_bounds("agents-scroll").unwrap().bottom() <= chip.top());
+
+    cx.update(|window, cx| {
+        view.update(cx, |view, _| {
+            view.config.sidebar_style.device_footer = crate::config::DeviceFooter::Never
+        });
+        full_draw(window, cx).clear(cx);
+    });
+    assert!(cx.debug_bounds("device-footer").is_none());
+    assert!(cx.debug_bounds("gh-chip").is_none());
+}

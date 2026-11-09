@@ -3,12 +3,15 @@
 
 mod accessibility;
 mod activity;
+mod agent_drag;
 mod agent_line;
+mod agent_lock;
 mod agent_stats;
 mod agents;
 mod animated;
 mod cell;
 mod device_drag;
+mod gh_chip;
 mod handoffs;
 mod header;
 mod host_row;
@@ -25,6 +28,7 @@ mod reorder;
 mod row;
 mod search;
 pub(crate) mod slide;
+mod split_floor;
 mod sticky;
 mod tokens;
 mod unified;
@@ -43,6 +47,7 @@ pub(crate) mod native_tests;
 
 pub(crate) use {
     activity::{Activity, ActivityPanel},
+    agent_drag::AgentDrag,
     agents::{Indicators, agent_name, state_label, status_indicator, status_text},
     device_drag::DeviceDrag,
     hover::{HoverMenu, HoverRest},
@@ -59,6 +64,7 @@ pub(crate) use {
     workspaces::{workspace_entries, workspace_label},
 };
 
+pub(crate) use gh_chip::GH_CHIP_HEIGHT;
 pub(crate) use layout::SidebarMetrics;
 pub(crate) use llm_rows::blocked_message;
 pub(crate) use order::step as sidebar_step;
@@ -68,7 +74,7 @@ pub(crate) use metrics::LABEL_WIDTH;
 
 pub(crate) use view::cached as cached_view;
 
-use agents::agents_sort;
+use agents::{agents_lock, agents_sort};
 use metrics::*;
 use row::{RowBadge, first_text};
 use workspaces::visible_workspace_entries;

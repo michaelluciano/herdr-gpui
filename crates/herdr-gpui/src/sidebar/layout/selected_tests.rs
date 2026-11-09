@@ -8,7 +8,7 @@ fn a_selected_fill_row_has_a_two_pixel_accent_edge() {
         density: Density::Normal,
         style: Style::Flat,
     });
-    assert_eq!(look.selected_edge(&theme), Some((2., 0xa99be0)));
+    assert_eq!(look.selected_edge(&theme), Some((2., 0x5cc8c0)));
     assert_eq!(look.selected_fill(&theme), 0x363849);
     assert_eq!(look.hover_fill(&theme), 0x33353a);
 }

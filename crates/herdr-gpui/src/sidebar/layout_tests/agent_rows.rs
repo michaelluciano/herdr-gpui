@@ -260,8 +260,11 @@ fn the_agents_header_toggles_between_grouped_and_priority(cx: &mut gpui::TestApp
     let (first, second) = ("row-agent-p0", "row-agent-p1");
     let sort = cx.debug_bounds("agents-sort").unwrap();
     let header = cx.debug_bounds("sidebar").unwrap();
-    // The label ends at the sidebar's inner edge, opposite the "agents" title.
-    assert_eq!(sort.right(), header.right() - px(13.));
+    // The lock follows the label and ends at the sidebar's inner edge,
+    // opposite the "agents" title.
+    let lock = cx.debug_bounds("agents-lock").unwrap();
+    assert!(sort.right() < lock.left());
+    assert_eq!(lock.right(), header.right() - px(13.));
     for (expected, top) in [(AgentSort::Grouped, first), (AgentSort::Priority, second)] {
         cx.update(|_, cx| {
             assert_eq!(view.read(cx).agent_sort, expected);
@@ -295,6 +298,71 @@ fn the_agents_header_toggles_between_grouped_and_priority(cx: &mut gpui::TestApp
         assert_eq!(view.agent_sort, AgentSort::Grouped);
         assert!(view.agent_sort_modified);
     });
+}
+
+/// The lock freezes the painted order at the click: statuses that would
+/// reorder the Priority sort change nothing until the lock is off again.
+#[gpui::test]
+fn the_agent_lock_freezes_the_painted_order(cx: &mut gpui::TestAppContext) {
+    use crate::preferences::AgentSort;
+    let (fixture, cx) = cx.add_window_view(|window, cx| {
+        crate::bind_keys(cx);
+        let view = cx.new(|cx| fixture_window(window, cx));
+        cx.observe(&view, |_, _, cx| cx.notify()).detach();
+        SidebarFixture(view)
+    });
+    let view = cx.update(|_, cx| fixture.read(cx).0.clone());
+    let set_statuses = |cx: &mut gpui::VisualTestContext, statuses: [AgentStatus; 2]| {
+        cx.update(|window, cx| {
+            view.update(cx, |view, _| {
+                let snapshot = Arc::make_mut(view.live.snapshot.as_mut().unwrap());
+                for (agent, status) in snapshot.agents.iter_mut().zip(statuses) {
+                    agent.agent_status = status;
+                    agent.state_change_seq = 1;
+                }
+            });
+            window.refresh();
+            full_draw(window, cx).clear(cx);
+        });
+    };
+    let first_is_above =
+        |cx: &mut gpui::VisualTestContext, first: &'static str, second: &'static str| {
+            let (a, b) = (
+                cx.debug_bounds(first).unwrap(),
+                cx.debug_bounds(second).unwrap(),
+            );
+            a.top() < b.top()
+        };
+    cx.update(|_, cx| {
+        view.update(cx, |view, _| view.agent_sort = AgentSort::Priority);
+    });
+    cx.simulate_resize(size(px(800.), px(600.)));
+    cx.run_until_parked();
+    set_statuses(cx, [AgentStatus::Working, AgentStatus::Idle]);
+    let (first, second) = ("row-agent-p0", "row-agent-p1");
+    assert!(first_is_above(cx, first, second));
+
+    let lock = cx.debug_bounds("agents-lock").unwrap();
+    cx.simulate_click(lock.center(), Default::default());
+    cx.update(|_, cx| {
+        let view = view.read(cx);
+        assert!(view.agent_lock);
+        assert!(view.agent_lock_modified);
+    });
+    // Priority alone would now put the blocked second agent on top.
+    set_statuses(cx, [AgentStatus::Working, AgentStatus::Blocked]);
+    assert!(first_is_above(cx, first, second));
+
+    let lock = cx.debug_bounds("agents-lock").unwrap();
+    cx.simulate_click(lock.center(), Default::default());
+    cx.update(|window, cx| {
+        let view = view.read(cx);
+        assert!(!view.agent_lock);
+        assert!(view.agent_frozen.is_empty());
+        window.refresh();
+        full_draw(window, cx).clear(cx);
+    });
+    assert!(first_is_above(cx, second, first));
 }
 
 /// A plugin's agent view names the panel and decides its rows: the daemon's
@@ -476,4 +544,117 @@ fn hiding_agents_preserves_scrolled_multi_endpoint_lists(cx: &mut gpui::TestAppC
             }
         }
     }
+}
+
+use gpui::{MouseButton, point};
+
+/// Three agents, so a drag has a middle to pass.
+fn three_agents(view: &mut HerdrWindow) {
+    let snapshot = Arc::make_mut(view.live.snapshot.as_mut().unwrap());
+    snapshot.agents = (0..3)
+        .map(|i| {
+            let mut agent = snapshot.agents[0].clone();
+            agent.pane_id = format!("p{i}");
+            agent
+        })
+        .collect();
+}
+
+fn agent_tops(cx: &mut gpui::VisualTestContext) -> Vec<String> {
+    let mut rows: Vec<_> = ["row-agent-p0", "row-agent-p1", "row-agent-p2"]
+        .into_iter()
+        .enumerate()
+        .map(|(i, key)| (cx.debug_bounds(key).unwrap().top(), i))
+        .collect();
+    rows.sort_by_key(|(top, _)| *top);
+    rows.into_iter().map(|(_, i)| format!("p{i}")).collect()
+}
+
+/// Dragging a row past another resorts the panel, freezes that order with
+/// the lock, and is not also a click on the row.
+#[gpui::test]
+fn dragging_an_agent_row_resorts_and_locks_the_panel(cx: &mut gpui::TestAppContext) {
+    let (view, cx) = cx.add_window_view(|window, cx| {
+        let mut view = fixture_window(window, cx);
+        three_agents(&mut view);
+        view
+    });
+    cx.simulate_resize(size(px(800.), px(900.)));
+    cx.update(|window, cx| full_draw(window, cx).clear(cx));
+    assert_eq!(agent_tops(cx), ["p0", "p1", "p2"]);
+    let first = cx.debug_bounds("row-agent-p0").unwrap();
+    let third = cx.debug_bounds("row-agent-p2").unwrap();
+
+    cx.simulate_mouse_down(first.center(), MouseButton::Left, Modifiers::default());
+    // Past the third row's middle: it lands last.
+    let below = point(first.center().x, third.center().y + px(2.));
+    cx.simulate_mouse_move(below, MouseButton::Left, Modifiers::default());
+    cx.update(|window, cx| full_draw(window, cx).clear(cx));
+    // The lifted row follows the pointer.
+    let lifted = cx.debug_bounds("row-agent-p0").unwrap();
+    assert_eq!(lifted.top() - first.top(), below.y - first.center().y);
+    cx.simulate_mouse_up(below, MouseButton::Left, Modifiers::default());
+    cx.update(|window, cx| full_draw(window, cx).clear(cx));
+
+    view.read_with(cx, |view, _| {
+        assert!(view.agent_lock);
+        assert!(view.agent_lock_modified);
+        assert_eq!(view.agent_frozen, ["p1", "p2", "p0"]);
+        assert!(view.pending_navigation.is_none(), "a drag is not a click");
+        assert!(view.agent_drag.is_none());
+    });
+    assert_eq!(agent_tops(cx), ["p1", "p2", "p0"]);
+}
+
+/// A press that never moves is still a click: it navigates and leaves the
+/// order alone.
+#[gpui::test]
+fn clicking_an_agent_row_still_navigates_and_keeps_the_order(cx: &mut gpui::TestAppContext) {
+    let (view, cx) = cx.add_window_view(|window, cx| {
+        let mut view = fixture_window(window, cx);
+        three_agents(&mut view);
+        view
+    });
+    cx.simulate_resize(size(px(800.), px(900.)));
+    cx.update(|window, cx| full_draw(window, cx).clear(cx));
+    let first = cx.debug_bounds("row-agent-p0").unwrap();
+    cx.simulate_mouse_down(first.center(), MouseButton::Left, Modifiers::default());
+    cx.simulate_mouse_up(first.center(), MouseButton::Left, Modifiers::default());
+    cx.update(|window, cx| full_draw(window, cx).clear(cx));
+    view.read_with(cx, |view, _| {
+        assert!(view.pending_navigation.is_some());
+        assert!(!view.agent_lock);
+        assert!(view.agent_frozen.is_empty());
+    });
+    assert_eq!(agent_tops(cx), ["p0", "p1", "p2"]);
+}
+
+/// Cancelling mid-drag (Escape) drops the row where it was, and the release
+/// after it changes nothing.
+#[gpui::test]
+fn cancelling_an_agent_row_drag_changes_nothing(cx: &mut gpui::TestAppContext) {
+    let (view, cx) = cx.add_window_view(|window, cx| {
+        let mut view = fixture_window(window, cx);
+        three_agents(&mut view);
+        view
+    });
+    cx.simulate_resize(size(px(800.), px(900.)));
+    cx.update(|window, cx| full_draw(window, cx).clear(cx));
+    let first = cx.debug_bounds("row-agent-p0").unwrap();
+    let third = cx.debug_bounds("row-agent-p2").unwrap();
+    cx.simulate_mouse_down(first.center(), MouseButton::Left, Modifiers::default());
+    let below = point(first.center().x, third.center().y + px(2.));
+    cx.simulate_mouse_move(below, MouseButton::Left, Modifiers::default());
+    cx.update(|window, cx| full_draw(window, cx).clear(cx));
+    view.read_with(cx, |view, _| assert!(view.agent_drag.is_some()));
+    // The window's Escape handler calls this, as for the other drags.
+    assert!(view.update(cx, |view, cx| view.cancel_agent_drag(cx)));
+    cx.simulate_mouse_up(below, MouseButton::Left, Modifiers::default());
+    cx.update(|window, cx| full_draw(window, cx).clear(cx));
+    view.read_with(cx, |view, _| {
+        assert!(view.agent_drag.is_none());
+        assert!(!view.agent_lock);
+        assert!(view.agent_frozen.is_empty());
+    });
+    assert_eq!(agent_tops(cx), ["p0", "p1", "p2"]);
 }

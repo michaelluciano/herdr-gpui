@@ -131,6 +131,10 @@ pub struct Chrome {
     pub review_files_width: Option<f32>,
     /// The device IDs in the order the user dragged them into.
     pub device_order: Vec<String>,
+    /// Whether the agent panel keeps the order frozen in `agent_frozen`.
+    pub agent_lock: bool,
+    /// The pane IDs in the order the panel was locked at.
+    pub agent_frozen: Vec<String>,
 }
 
 pub struct Preferences {
@@ -294,6 +298,11 @@ fn read_chrome(path: &Path) -> crate::Result<Chrome> {
         notes_width: panel_width("notes_width_px"),
         review_files_width: panel_width("review_files_width_px"),
         device_order: device_order(object.get("device_order")),
+        agent_lock: object
+            .get("agent_lock")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false),
+        agent_frozen: device_order(object.get("agent_frozen")),
     })
 }
 
@@ -377,6 +386,8 @@ fn write_chrome(path: &Path, chrome: Chrome) -> crate::Result<()> {
                     .review_files_width
                     .filter(|width| width.is_finite() && *width > 0.0),
                 "device_order": chrome.device_order,
+                "agent_lock": chrome.agent_lock,
+                "agent_frozen": chrome.agent_frozen,
             }),
         )?;
         file.write_all(b"\n")?;

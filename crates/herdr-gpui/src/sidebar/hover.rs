@@ -52,6 +52,8 @@ impl HerdrWindow {
                 notes_width: self.notes_width.chosen(),
                 review_files_width: self.review_files_width.chosen(),
                 device_order: self.device_order.clone(),
+                agent_lock: self.agent_lock,
+                agent_frozen: self.agent_frozen.clone(),
             });
         }
     }

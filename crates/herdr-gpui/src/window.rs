@@ -113,6 +113,17 @@ pub(crate) struct HerdrWindow {
     pub(crate) active: bool,
     /// The activity bar's panel and filter.
     pub(crate) activity: sidebar::Activity,
+    /// What each local Claude agent is doing, from its hooks' state files.
+    pub(crate) agent_activity: crate::agent_activity::AgentActivity,
+    /// A press or lift on an agent row, for reordering the agents panel.
+    pub(crate) agent_drag: Option<sidebar::AgentDrag>,
+    /// The pane IDs in the order the panel was locked at.
+    pub(crate) agent_frozen: Vec<String>,
+    /// Whether the agent panel keeps `agent_frozen`'s order instead of
+    /// re-sorting itself.
+    pub(crate) agent_lock: bool,
+    /// Whether the user toggled the lock, now or in a stored session.
+    pub(crate) agent_lock_modified: bool,
     pub(crate) agent_sort: preferences::AgentSort,
     /// Whether the user chose the sort with the panel toggle, now or in a
     /// stored session. Until then the daemon's `ui.agent_panel_sort` decides,
@@ -207,20 +218,18 @@ pub(crate) struct HerdrWindow {
     /// Where the titlebar's Git button last painted. The window owns it so a
     /// shortcut and a click open the Git menu at the same place.
     pub(crate) git_anchor: std::rc::Rc<std::cell::Cell<Point<Pixels>>>,
-    /// Each graph tab's state, by its tab.
-    pub(crate) graphs:
-        std::collections::HashMap<crate::browser::TabId, crate::graph_view::state::GraphState>,
     /// Each graph tab's keyboard focus, by its tab.
     pub(crate) graph_focus: std::collections::HashMap<crate::browser::TabId, FocusHandle>,
     /// Each graph tab's list scroll position, by its tab.
     pub(crate) graph_scroll:
         std::collections::HashMap<crate::browser::TabId, UniformListScrollHandle>,
+    /// Each graph tab's state, by its tab.
+    pub(crate) graphs:
+        std::collections::HashMap<crate::browser::TabId, crate::graph_view::state::GraphState>,
     /// Unknown keys in the GUI config, ignored but reported; follows `config`.
     pub(crate) gui_config_diagnostic: crate::config_diagnostic::ConfigDiagnostic,
     /// The open session handoffs the sidebar lists, and when they were read.
     pub(crate) handoffs: crate::handoffs::Handoffs,
-    /// What each local Claude agent is doing, from its hooks' state files.
-    pub(crate) agent_activity: crate::agent_activity::AgentActivity,
     pub(crate) held_keys: crate::terminal::HeldKeys,
     /// The sidebar row the pointer is resting on, waiting to open its menu.
     pub(crate) hover: Option<sidebar::HoverRest>,
@@ -531,6 +540,11 @@ impl HerdrWindow {
             self.agent_sort = sort;
             self.agent_sort_modified = true;
         }
+        // A lock toggled before the stored one loaded keeps its own order.
+        if !self.agent_lock_modified {
+            self.agent_lock = chrome.agent_lock;
+            self.agent_frozen = chrome.agent_frozen;
+        }
         // Saved once the whole chrome is merged, so the save keeps it all.
         if resave {
             self.save_chrome();
@@ -670,6 +684,7 @@ impl HerdrWindow {
             self.discard_composition(cx);
         }
         self.poll_github(window, cx);
+        self.poll_gh_chip(cx);
         if self.update_workspace_pr() {
             cx.notify();
         }
