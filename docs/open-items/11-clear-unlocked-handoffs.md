@@ -1,10 +1,16 @@
-# Clear handoffs that are not locked
+# Clear past handoffs that are not locked
 
 Status: future item, not started; answers recorded 2026-11-08, build on request
 
 ## Goal
 
-Give the Handoffs panel a way to clear every handoff that is not locked, so finished and superseded handoffs stop piling up in the list.
+Add one action to the Handoffs panel that clears every past handoff that is not locked, so finished and superseded handoffs stop piling up. Locked handoffs always stay.
+
+## What exists today
+
+- A handoff's lock is the padlock on its row. It is stored as the pin set, `handoff-pinned.json` in the app's state directory (`crates/herdr-gpui/src/handoffs/pinned.rs`), per machine.
+- Clearing a row is a dismissal: the row's x adds its path to `handoff-dismissed.json` (`handoffs/dismissed.rs`). The handoff file is never touched, and "Restore cleared (N)" brings every dismissed row back.
+- The all view's bar (`bulk_actions` in `crates/herdr-gpui/src/sidebar/handoffs.rs`) offers "Clear picked up (N)" and "Restore cleared (N)". It only shows in the all view while something is picked up, which is why it is easy to miss. `Handoffs::clear_picked_up` in `handoffs/poll.rs` dismisses only picked-up rows, and it does not look at the pin set. Superseded rows can only be cleared one at a time.
 
 ## Decisions already made
 
@@ -12,7 +18,7 @@ Give the Handoffs panel a way to clear every handoff that is not locked, so fini
 - Clearing means dismissal, so it is reversible with "Restore cleared" and no file is deleted.
 - No confirmation.
 - Locks and clears are shared: every machine and window that reads the same handoffs shows the same locked and cleared rows. Today each machine keeps its own state files, so this changes where they are stored.
-- "Clear picked up (N)" is not visible today because the bar only shows in the all view while something is picked up. The new action is one bar entry for both shelves, replacing "Clear picked up (N)", and it shows whenever there is a past row to clear (assumed; the answer did not say).
+- The new action is one bar entry for both shelves, replacing "Clear picked up (N)", and it shows whenever there is a past row to clear (assumed; the answer did not say).
 
 ## Open questions
 
@@ -22,5 +28,6 @@ Give the Handoffs panel a way to clear every handoff that is not locked, so fini
 
 ## Where to start
 
-- Handoffs panel: `crates/herdr-gpui/src/sidebar/handoffs.rs`; the list and its kinds are in `crates/herdr-gpui/src/handoffs/list.rs`; the refresh is `handoffs/poll.rs` (a changed file shows within about a second, PR 35).
-- Do the file work on the background executor, never on the UI thread.
+- Do not start before the shared-state question is answered. Then add a method beside `clear_picked_up` in `crates/herdr-gpui/src/handoffs/poll.rs` that dismisses every picked-up and superseded path not in `self.pinned`, with tests in a new topic file under `handoffs/tests/`.
+- Wire it in `bulk_actions` in `crates/herdr-gpui/src/sidebar/handoffs.rs` and give the control a layout test.
+- Saving the dismissal set already runs off the UI thread; keep it that way.
