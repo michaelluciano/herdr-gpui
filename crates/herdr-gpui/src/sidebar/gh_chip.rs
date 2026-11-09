@@ -11,6 +11,9 @@ use std::time::{Duration, Instant};
 /// The chip row's height, above the device footer; the split-drag math adds it.
 pub(crate) const GH_CHIP_HEIGHT: f32 = 24.;
 
+/// The signed-in account's color: the amber Claude Code uses for "auto mode on".
+const ACCOUNT_YELLOW: u32 = 0xFFC009;
+
 /// How long a status read stays fresh before the next tick repeats it.
 const REFRESH: Duration = Duration::from_secs(60);
 
@@ -141,9 +144,8 @@ impl HerdrWindow {
         let view = chip_view(&state.accounts, state.owner.as_deref());
         let tokens = self.theme.tokens();
         let color = match view.tone {
-            ChipTone::Match | ChipTone::Unknown => tokens.dim,
+            ChipTone::Match | ChipTone::Unknown | ChipTone::Mismatch => ACCOUNT_YELLOW,
             ChipTone::Missing => tokens.faint,
-            ChipTone::Mismatch => tokens.working,
         };
         let hint = match view.tone {
             ChipTone::Mismatch => "GitHub account differs from this repository's owner",

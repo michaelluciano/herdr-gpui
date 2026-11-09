@@ -1,6 +1,6 @@
 # GitHub account chip
 
-Status: not started
+Status: PR 23 open on `feat/gh-account-chip` (2 commits, rebased onto main 2026-11-08); 4784 app tests, format, sorted and lint pass. `lint-linux`, `lint-windows` and the updater test were not run. Needs a real-window check.
 
 ## Goal
 
@@ -15,6 +15,10 @@ Show which GitHub account the `gh` command line tool is currently using, and let
 - It never switches accounts by itself; only an explicit operator click does.
 - Local host only at first.
 - It is separate from the app's own GitHub sign-in (`crates/herdr-github`), which is used for pull request badges. The two must not share state or labels.
+
+## Known limitation
+
+The chip compares the repository owner to the account name. A repository owned by an organization (for example Colorado-Atlantic, worked on as `mlucianoCAE`) shows amber even when the account is right. Fixing it needs a mapping from organization to account; not planned.
 
 ## Open questions
 

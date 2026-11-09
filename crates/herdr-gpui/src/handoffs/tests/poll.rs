@@ -19,7 +19,7 @@ fn the_root_is_claude_private_handoffs_under_home() {
 }
 
 /// A window and a counter of how often it notified.
-fn counted(
+pub(super) fn counted(
     cx: &mut gpui::TestAppContext,
 ) -> (Entity<HerdrWindow>, Rc<Cell<usize>>, &mut VisualTestContext) {
     let notified = Rc::new(Cell::new(0));
@@ -38,13 +38,18 @@ fn counted(
     (view, notified, cx)
 }
 
-fn poll(view: &Entity<HerdrWindow>, cx: &mut VisualTestContext, now: Instant, root: &Root) {
+pub(super) fn poll(
+    view: &Entity<HerdrWindow>,
+    cx: &mut VisualTestContext,
+    now: Instant,
+    root: &Root,
+) {
     let root = root.path().to_owned();
     cx.update(|_, cx| view.update(cx, |view, cx| view.poll_handoffs_at(now, root, cx)));
     cx.run_until_parked();
 }
 
-fn ids(view: &Entity<HerdrWindow>, cx: &mut VisualTestContext) -> Vec<String> {
+pub(super) fn ids(view: &Entity<HerdrWindow>, cx: &mut VisualTestContext) -> Vec<String> {
     view.read_with(cx, |view, _| {
         view.handoffs
             .board
@@ -55,7 +60,10 @@ fn ids(view: &Entity<HerdrWindow>, cx: &mut VisualTestContext) -> Vec<String> {
     })
 }
 
-fn history(view: &Entity<HerdrWindow>, cx: &mut VisualTestContext) -> Vec<(String, Shelf)> {
+pub(super) fn history(
+    view: &Entity<HerdrWindow>,
+    cx: &mut VisualTestContext,
+) -> Vec<(String, Shelf)> {
     view.read_with(cx, |view, _| {
         view.handoffs
             .board
@@ -95,7 +103,7 @@ fn a_poll_that_finds_the_same_list_does_not_notify(cx: &mut gpui::TestAppContext
 }
 
 #[gpui::test]
-fn a_changed_directory_updates_the_list_after_five_seconds(cx: &mut gpui::TestAppContext) {
+fn a_changed_directory_updates_the_list_on_the_next_check(cx: &mut gpui::TestAppContext) {
     let root = Root::new("poll-change");
     let first = root.session("p", "a.md", open_header("a", "2026-10-30"));
     let (view, notified, cx) = counted(cx);
@@ -104,18 +112,14 @@ fn a_changed_directory_updates_the_list_after_five_seconds(cx: &mut gpui::TestAp
     assert_eq!(ids(&view, cx), ["a"]);
 
     root.session("q", "b.md", open_header("b", "2026-10-31"));
-    // Inside the interval nothing is read.
-    poll(&view, cx, t0 + Duration::from_secs(2), &root);
-    assert_eq!(ids(&view, cx), ["a"], "polled again before five seconds");
-
     let before = notified.get();
-    poll(&view, cx, t0 + Duration::from_secs(6), &root);
+    poll(&view, cx, t0 + Duration::from_secs(2), &root);
     assert_eq!(ids(&view, cx), ["b", "a"]);
     assert!(notified.get() > before);
 
-    // Claiming a file moves it to the history at the next due poll.
+    // Claiming a file moves it to the history at the next check.
     std::fs::write(&first, "---\nid: a\nstatus: claimed\n---\n").unwrap();
-    poll(&view, cx, t0 + Duration::from_secs(12), &root);
+    poll(&view, cx, t0 + Duration::from_secs(4), &root);
     assert_eq!(ids(&view, cx), ["b"]);
     assert_eq!(history(&view, cx), [("a".to_owned(), Shelf::PickedUp)]);
 }
