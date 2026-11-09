@@ -116,6 +116,44 @@ symbol, file, or printed `path:line` in your terminal editor,
 [Dock badge](crates/herdr-gpui/README.md#macos-dock-badge) (on Windows, a
 [taskbar badge](crates/herdr-gpui/README.md#windows-shell)) when an agent needs you.
 
+## Added in this fork
+
+[michaelluciano/herdr-gpui](https://github.com/michaelluciano/herdr-gpui) adds
+the following on top of the upstream client. Open and unverified work is
+tracked in [docs/open-items](docs/open-items/README.md).
+
+<p align="center">
+  <img src="docs/screenshots/fork-sidebar.png" alt="The sidebar of a running build: hosts with CPU and memory, a Claude agent row with its context size, the Handoffs panel with padlocks and a Restore cleared bar, and the signed-in GitHub account in amber above the device footer" width="360">
+  <br>
+  <sub><b>The fork's sidebar.</b> Agent rows with context size, the Handoffs panel with padlocks, and the GitHub account chip, in the teal-accented build (a worktree build also shows the teal strip under the window).</sub>
+</p>
+
+- **Handoffs panel.** Lists the newest handoff per project, read from
+  `LATEST.md` and `history/` under `~/claude-private/handoffs`. A new or removed
+  file shows within about a second. Click a row to copy its path, right-click to
+  open it in a code tab, and use the padlock to keep a handoff pinned. Picked-up
+  and superseded handoffs fold into a history view; **Clear picked up** hides
+  them and **Restore cleared** brings them back. Hiding never deletes a file.
+- **Agent rows.** Each Claude agent shows its model letter beside the icon and
+  its context size at the far right, and the session id is one click away in the
+  row's right-click menu. The model and context need the `transcript` key in the
+  agent's activity state file, which the Claude activity hook writes.
+- **Agents panel order.** Lock the panel's order so rows stop re-sorting, and
+  drag a row to move it.
+- **GitHub account chip.** The signed-in `gh` account sits above the device
+  footer in the amber Claude Code uses for "auto mode on". A click switches to
+  the next logged-in account; it never switches by itself. A repository owned by
+  another account keeps the color and shows a semibold label with a hint.
+- **Sidebar and status bar.** The divider between spaces and agents stays below
+  the workspace list, and the status bar's listening ports scroll sideways
+  instead of covering usage.
+- **Teal accent.** The default accent is teal, and a worktree build shows a teal
+  strip and icon so it is never mistaken for the normal app.
+- **Control socket takeover.** A second Herdr UI takes over the control socket
+  within about two seconds when the first quits, instead of never binding.
+- **LLM launcher rows and Git graph.** Start a local model from its sidebar row,
+  and open a Git graph tab for a local checkout.
+
 ## Install
 
 Install the [Herdr](https://herdr.dev/) daemon first; this app is only its client.
