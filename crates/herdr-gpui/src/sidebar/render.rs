@@ -12,7 +12,7 @@ use super::{
     line_height,
     reorder::{self, Plan},
     row::{RowIcon, RowLift, RowTree},
-    sidebar_width, sticky,
+    sidebar_width, split_floor, sticky,
     tokens::{self, SpaceContext},
     visible_workspace_entries, wash,
     workspaces::{displayed_workspace_status, workspace_badge, workspace_label, workspace_note},
@@ -682,6 +682,8 @@ impl HerdrWindow {
                     })),
             );
         }
+        // The new/menu row under the list is spaces-section chrome too.
+        let spaces_foot = line_height(font) + 2. * layout.footer_padding();
         div()
             .id("sidebar")
             .debug_selector(|| "sidebar".into())
@@ -750,7 +752,7 @@ impl HerdrWindow {
                     .child(
                         div()
                             .flex_none()
-                            .h(px(line_height(font) + 2. * layout.footer_padding()))
+                            .h(px(spaces_foot))
                             .px(px(content_x))
                             .flex()
                             .items_center()
@@ -929,12 +931,18 @@ impl HerdrWindow {
                                                 let height =
                                                     (f32::from(bounds.size.height) - 6. - footer)
                                                         .max(1.);
+                                                let floor = split_floor::drag_floor(
+                                                    &this.sidebar_scroll[0],
+                                                    f32::from(bounds.origin.y),
+                                                    spaces_foot,
+                                                    height,
+                                                );
                                                 this.sidebar_split = Some(
                                                     ((f32::from(
                                                         event.position.y - bounds.origin.y,
                                                     ) - 3.)
                                                         / height)
-                                                        .clamp(0.1, 0.9),
+                                                        .clamp(floor, split_floor::MAX_SPLIT),
                                                 );
                                             }
                                         }
