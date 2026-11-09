@@ -1,6 +1,6 @@
 # Real-window QA
 
-Status: needs verification at a desktop; no check below has been run since 2026-11-01
+Status: needs verification at a desktop; no check below has been run since 2026-11-01. The 2026-11-08 checks at the end of the list are new.
 
 ## Goal
 
@@ -16,6 +16,13 @@ Confirm in a real window the behavior that unit tests do not cover. These checks
 - The remote terminal launcher row opens a tab, types its command, and runs it.
 - A host with no workspace shows its flash. A click while another tab is opening shows its flash.
 - Handoffs panel: the title folds; `picked up N` toggles the history; rows show `MM-DD HH:MM`, or `MM-DD` when no time is known.
+- A new handoff file shows in the panel within about a second, and a deleted one leaves within about a second (PR 35).
+- The GitHub chip shows the signed-in account in amber; a click switches to the next account; a repository owned by another account keeps the amber color and a semibold label (PR 23).
+- Quit one Herdr UI while a second runs: the second takes over the control socket within about two seconds (PR 33).
+- The session lock keeps the agent panel's order until unlocked (PR 27); dragging an agent row reorders the panel, and a drop on its own place changes nothing (PR 28).
+- A Claude agent row shows its model letter beside the icon and its context size at the far right, in every row layout (PR 29). This needs a pane whose activity state file has a `transcript` key.
+- The spaces/agents divider cannot be dragged below the workspace list (PR 25); the status bar ports scroll sideways instead of covering usage (PR 24).
+- The default accent is teal (PR 30); a worktree build shows the teal strip and icon (PRs 26 and 22).
 
 ## Not covered by any automated test
 

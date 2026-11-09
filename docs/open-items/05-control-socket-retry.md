@@ -1,6 +1,6 @@
 # Control socket never retries its bind
 
-Status: fixed on `fix/control-socket-retry` (PR 33). A real-window check is still to do.
+Status: merged (PR 33, 2026-11-08). A real-window check is still to do.
 
 ## Problem
 

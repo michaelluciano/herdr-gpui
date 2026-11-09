@@ -1,6 +1,6 @@
 # GitHub account chip
 
-Status: PR 23 open on `feat/gh-account-chip` (2 commits, rebased onto main 2026-11-08); 4784 app tests, format, sorted and lint pass. `lint-linux`, `lint-windows` and the updater test were not run. Needs a real-window check.
+Status: merged (PR 23, 2026-11-08). The signed-in account shows in the amber of Claude Code's "auto mode on" (`ACCOUNT_YELLOW` in `sidebar/gh_chip.rs`); a mismatch with the repository owner stays semibold with an aria hint but no longer changes color. 4830 app tests pass on main. `lint-linux`, `lint-windows` and the updater test were not run. Needs a real-window check.
 
 ## Goal
 
