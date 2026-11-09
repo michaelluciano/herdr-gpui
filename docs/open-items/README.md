@@ -14,7 +14,7 @@ Last reviewed 2026-11-08. Status comes from the branches and tests named in each
 | Gaps against the UI mockup | [07-ui-gaps.md](07-ui-gaps.md) | not started |
 | Cleanups and known nits | [08-cleanups.md](08-cleanups.md) | partly done in PR 31; updater test blocked on the toolchain; `lint-linux` and `lint-windows` never run on main |
 | Teal worktree icon | [10-teal-worktree-icon.md](10-teal-worktree-icon.md) | assets merged (PR 22); only `Herdr-worktree.car` is still red, blocked on Xcode |
-| Clear past handoffs that are not locked | [11-clear-unlocked-handoffs.md](11-clear-unlocked-handoffs.md) | not started; the padlock and dismissal already exist, the bulk action does not |
+| Clear past handoffs that are not locked | [11-clear-unlocked-handoffs.md](11-clear-unlocked-handoffs.md) | future; padlock and dismissal exist, the bulk action and shared state do not |
 
 ## Blocked on something outside the code
 
@@ -28,7 +28,7 @@ Last reviewed 2026-11-08. Status comes from the branches and tests named in each
 - PRs 7 to 13 and 16 are item documents written before the 2026-11-07 refresh (PR 32). Merging them would overwrite the refreshed statuses; close them or rebase them by hand.
 - Model letter and context size on agent rows (PR 29) need the `transcript` key in each pane's activity state file. The Claude activity hook now writes it (2026-11-08); panes pick it up on their next hook event. Check it in a real window (item 06).
 - Item 03 stays on hold.
-- Item 11: clear every past handoff that is not locked. The padlock (pin) and reversible dismissal exist; whether the action also clears active handoffs is open.
+- Item 11 (future): clear every past handoff that is not locked, with locks and clears shared across machines. Where the shared state lives is open.
 
 ## Merged on 2026-11-08, not yet checked in a real window
 
