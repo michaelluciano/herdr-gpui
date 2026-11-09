@@ -119,8 +119,6 @@ pub(crate) struct HerdrWindow {
     pub(crate) agent_drag: Option<sidebar::AgentDrag>,
     /// The pane IDs in the order the panel was locked at.
     pub(crate) agent_frozen: Vec<String>,
-    /// The pane IDs in the order the panel was locked at.
-    pub(crate) agent_frozen: Vec<String>,
     /// Whether the agent panel keeps `agent_frozen`'s order instead of
     /// re-sorting itself.
     pub(crate) agent_lock: bool,

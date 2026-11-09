@@ -1,4 +1,3 @@
-use super::apply;
 use super::{apply, moved};
 use crate::sidebar::layout_tests;
 use herdr_client::protocol::ClientShellAgent;
