@@ -3,7 +3,7 @@
 //! caches only.
 
 use super::{
-    DEVICE_FOOTER_HEIGHT, ICON_RESERVE, STATUS_WIDTH, SidebarDrag,
+    DEVICE_FOOTER_HEIGHT, GH_CHIP_HEIGHT, ICON_RESERVE, STATUS_WIDTH, SidebarDrag,
     agents::Indicators,
     agents_sort,
     cell::{Cell, Fold, RowContext, RowData, WorkspaceRow, layout_for},
@@ -841,7 +841,9 @@ impl HerdrWindow {
             .children(self.handoffs_section(devices, look, cx))
             .map(|sidebar| {
                 if self.device_footer_shown() {
-                    sidebar.child(self.render_device_footer(cx))
+                    sidebar
+                        .child(self.render_gh_chip(cx))
+                        .child(self.render_device_footer(cx))
                 } else {
                     sidebar.child(self.render_sessions_anchor())
                 }
@@ -920,7 +922,7 @@ impl HerdrWindow {
                                             }
                                             SidebarDrag::Split => {
                                                 let footer = if this.device_footer_shown() {
-                                                    DEVICE_FOOTER_HEIGHT
+                                                    DEVICE_FOOTER_HEIGHT + GH_CHIP_HEIGHT
                                                 } else {
                                                     0.
                                                 };
