@@ -34,6 +34,14 @@ Last reviewed 2026-11-08. Status comes from the branches and tests named in each
 
 Account chip (PR 23), control socket rebind (PR 33), handoffs panel refresh within a second (PR 35), session lock (PR 27), agent drag (PR 28), model letter and context size (PR 29), divider floor (PR 25), ports scroll (PR 24), teal accent (PR 30), teal worktree strip and icons (PRs 26 and 22). The checks are listed in item 06. `just lint-linux` and `just lint-windows` have not been run on main.
 
+## Housekeeping
+
+- Current build: `main` at `2e45653c` (PR 29), built with `just bundle release` and ad-hoc signed. It is not installed anywhere until the operator swaps it into `~/Applications/Herdr Dev.app`; the previous app stays as `Herdr Dev.app.prev` for rollback. Later documentation-only merges do not change the app.
+- Merged branches still on the fork, to delete by name once confirmed (never a sweep): `fix/main-gates`, `docs/open-items-refresh`, `docs/open-items-pr-links`, `docs/open-items-2026-11-08`, `docs/item-11-clear-unlocked`, `docs/item-11-future`, `docs/item-11-repair`, `docs/open-items-housekeeping`, `feat/gh-account-chip`, `fix/control-socket-retry`, `fix/handoffs-fast-refresh`, `feat/teal-accent`, `feat/teal-worktree-icon`, `feat/status-glyphs`, `feat/sidebar-divider-floor`, `feat/status-bar-ports-scroll`, `feat/session-lock`, `feat/agent-drag`, `feat/session-stats`.
+- Local worktrees under `.worktrees/` left from the merge work (some are locked): `socket-retry`, `handoffs-fast`, `train`, `live-1108`, and the earlier feature worktrees. Removal is the operator's: unlock, then `git worktree remove`.
+- The local branch `live/2026-11-08` is a throwaway merge of the feature branches for a first build; its commits carry attribution trailers. Never push it.
+- Pushing and merging need the `michaelluciano` GitHub account. The active `gh` account on the Mac was switched to another account twice while the merge train ran, so every push and merge checks `gh api user --jq .login` first and stops on a mismatch.
+
 ## Done recently
 
 - Feature branches merged into main on 2026-11-08: PRs 22 to 30, 33 and 35.
