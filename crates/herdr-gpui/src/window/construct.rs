@@ -138,6 +138,7 @@ impl HerdrWindow {
             active: window.is_window_active(),
             activity: Default::default(),
             agent_activity: Default::default(),
+            agent_drag: None,
             agent_frozen: Vec::new(),
             agent_lock: false,
             agent_lock_modified: false,

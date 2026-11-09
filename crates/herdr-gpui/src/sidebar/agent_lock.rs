@@ -20,5 +20,20 @@ pub(super) fn apply<'a>(
     rows
 }
 
+/// `order` with `dragged` lifted out and dropped into the gap `slot`, a gap
+/// index in `order` as it stands (`order.len()` is the end). `None` when
+/// `dragged` is not listed or the drop leaves the order as it was.
+pub(super) fn moved(order: &[String], dragged: &str, slot: usize) -> Option<Vec<String>> {
+    let from = order.iter().position(|id| id == dragged)?;
+    let mut next = order.to_vec();
+    next.remove(from);
+    // The gap indices count the dragged row still in place.
+    next.insert(
+        if slot > from { slot - 1 } else { slot }.min(next.len()),
+        dragged.to_owned(),
+    );
+    (next != order).then_some(next)
+}
+
 #[cfg(test)]
 mod tests;

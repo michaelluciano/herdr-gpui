@@ -115,6 +115,8 @@ pub(crate) struct HerdrWindow {
     pub(crate) activity: sidebar::Activity,
     /// What each local Claude agent is doing, from its hooks' state files.
     pub(crate) agent_activity: crate::agent_activity::AgentActivity,
+    /// A press or lift on an agent row, for reordering the agents panel.
+    pub(crate) agent_drag: Option<sidebar::AgentDrag>,
     /// The pane IDs in the order the panel was locked at.
     pub(crate) agent_frozen: Vec<String>,
     /// Whether the agent panel keeps `agent_frozen`'s order instead of
