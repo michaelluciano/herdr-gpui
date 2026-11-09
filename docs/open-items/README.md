@@ -15,6 +15,7 @@ Last reviewed 2026-11-08. Status comes from the branches and tests named in each
 | Cleanups and known nits | [08-cleanups.md](08-cleanups.md) | partly done in PR 31; updater test blocked on the toolchain; `lint-linux` and `lint-windows` never run on main |
 | Teal worktree icon | [10-teal-worktree-icon.md](10-teal-worktree-icon.md) | assets merged (PR 22); only `Herdr-worktree.car` is still red, blocked on Xcode |
 | Clear past handoffs that are not locked | [11-clear-unlocked-handoffs.md](11-clear-unlocked-handoffs.md) | future; padlock and dismissal exist, the bulk action and shared state do not |
+| Containers and visibility to them | [12-containers-and-visibility.md](12-containers-and-visibility.md) | future; recorded 2026-11-08, nothing built, runtimes and scope undecided |
 
 ## Blocked on something outside the code
 
