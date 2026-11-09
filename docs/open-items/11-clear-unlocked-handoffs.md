@@ -1,23 +1,31 @@
-# Clear handoffs that are not locked
+# Clear past handoffs that are not locked
 
 Status: not started; requested 2026-11-08
 
 ## Goal
 
-Give the Handoffs panel a way to clear every handoff that is not locked, so finished and superseded handoffs stop piling up in the list.
+Add one action to the Handoffs panel that clears every past handoff that is not locked, so finished and superseded handoffs stop piling up. Locked handoffs always stay.
+
+## What exists today
+
+- A handoff's lock is the padlock on its row. It is stored as the pin set, `handoff-pinned.json` in the app's state directory (`crates/herdr-gpui/src/handoffs/pinned.rs`), per machine.
+- Clearing a row is a dismissal: the row's x adds its path to `handoff-dismissed.json` (`handoffs/dismissed.rs`). The handoff file is never touched, and "Restore cleared (N)" brings every dismissed row back.
+- The all view's bar (`bulk_actions` in `crates/herdr-gpui/src/sidebar/handoffs.rs`) offers "Clear picked up (N)" and "Restore cleared (N)". `Handoffs::clear_picked_up` in `handoffs/poll.rs` dismisses only picked-up rows, and it does not look at the pin set. Superseded rows can only be cleared one at a time.
 
 ## Decisions already made
 
-- The action clears only handoffs that are not locked; a locked handoff always stays.
+- The action clears past handoffs: the picked-up and superseded rows. A locked handoff is never cleared.
+- Clearing means dismissal, so it is reversible with "Restore cleared" and no file is deleted.
 
 ## Open questions
 
-- What "locked" means for a handoff. The session lock from PR 27 locks the agent panel's order and does not apply to handoff rows, so a per-handoff lock would be new: where it is stored (in the handoff root, so every client agrees, or in the app) and how a row shows and toggles it.
-- What "clear" does to the file: delete it, move it into `history/`, or only hide the row. Handoffs are files under the handoff root (`LATEST.md`, `sessions/`, `history/`), so a delete cannot be undone from the app.
-- Whether it asks for confirmation. The repository rules say destructive actions open the app's own dialog and the user confirms there.
-- Whether it applies to all projects or to the focused project only, and whether it belongs on the control socket (`docs/cli.md`) as well as in the panel.
+- Whether it also clears active handoffs (the newest open one per project) that are not locked. "Past" says no; confirm.
+- Whether it replaces "Clear picked up (N)" or sits beside it. One bar entry that covers both shelves is simpler.
+- Whether a confirmation is needed. Dismissal is undoable, so none is the default.
+- Whether pins and dismissals should be shared across machines. Today each machine keeps its own state files.
 
 ## Where to start
 
-- Handoffs panel: `crates/herdr-gpui/src/sidebar/handoffs.rs`; the list and its kinds are in `crates/herdr-gpui/src/handoffs/list.rs`; the refresh is `handoffs/poll.rs` (a changed file shows within about a second, PR 35).
-- Do the file work on the background executor, never on the UI thread.
+- Add a method beside `clear_picked_up` in `crates/herdr-gpui/src/handoffs/poll.rs` that dismisses every picked-up and superseded path not in `self.pinned`, with tests in a new topic file under `handoffs/tests/`.
+- Wire it in `bulk_actions` in `crates/herdr-gpui/src/sidebar/handoffs.rs` and give the control a layout test.
+- Saving the dismissal set already runs off the UI thread; keep it that way.
