@@ -1,6 +1,6 @@
 # Cleanups and known nits
 
-Status: not started
+Status: partly done in PR 31 (sort order and the `cfg(test)` gate). Still open: the `herdr-updater` test fails on this Mac (SDK, see README), and `just lint-linux` and `just lint-windows` have not been run on main.
 
 ## Goal
 

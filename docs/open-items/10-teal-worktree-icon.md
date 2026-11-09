@@ -1,6 +1,6 @@
 # Teal worktree icon
 
-Status: teal PNGs, .icns, .ico and Linux SVG are in PR 17; only `Herdr-worktree.car` is still red, blocked on Xcode
+Status: teal PNGs, .icns, .ico and Linux SVG are on main (PR 22); only `Herdr-worktree.car` is still red, blocked on Xcode
 
 ## Goal
 
