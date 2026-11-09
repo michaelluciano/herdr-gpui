@@ -14,7 +14,7 @@ Make the icon of a worktree build a shade of teal instead of red. A normal build
 
 ## Open questions
 
-- Whether the stable icon should change too. The operator's request named the red icon only.
+- Whether the stable app icon should change too. The README header uses the teal icon since 2026-11-08; the app's stable `Herdr.icns`, `.ico`, `.car` and Linux icon are unchanged, and changing them needs the `.car` rebuilt with Xcode.
 - The exact teal. Pick it from a rendered comparison, not by guessing matrix values.
 
 ## Blockers
